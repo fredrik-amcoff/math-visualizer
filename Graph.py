@@ -55,10 +55,7 @@ class Point():
                 setattr(self, key, value)
             else:
                 raise AttributeError(f'{key} not found.')
-        print(self.x, self.y)
-        print(self.func(5,5))
         x_transform, y_transform = self.func(self.x, self.y)
-        print(x_transform, y_transform)
         self.x_transform = x_transform
         self.y_transform = y_transform
         self.scatter.setData([x_transform], [y_transform])
@@ -123,15 +120,12 @@ class Grid(QtWidgets.QWidget):
 
         param = Parameter(name, label, slider, min_val, max_val, init_val, step)
         slider.valueChanged.connect(lambda _: self._update_param(param))
-        print(param.value)
         self.parameters[name] = param
         self.parameter_values[name] = init_val
         self.parameter_connections[name] = []
         return param
 
     def _update_param(self, param):
-        for point in self.points:
-            print(point.__dict__['func'](5, 5))
         param_vals = param.__dict__
         decimals = max(0, int(-np.log10(param_vals["step"])) if param_vals["step"] < 1 else 0)
         param_vals["value"] = round(param_vals["slider"].value() * param_vals["step"], decimals)

@@ -162,13 +162,13 @@ class Grid(QtWidgets.QWidget):
         parameter_connections = {}
         for value, var in [(X, "x"), (Y, "y")]:
             parameter_connections[var] = []
-            if type(value) == str:
-                if value in self.parameters:
-                    values.append(self.parameters[value].value)
+            if type(value) == Parameter:
+                if value in self.parameters.values():
+                    values.append(value.value)
                     params.append(value)
-                    parameter_connections[var].append(self.parameters[value].name)
+                    parameter_connections[var].append(value.name)
                 else:
-                    raise NameError("Parameter {} is not defined.".format(value))
+                    raise NameError("Parameter {} is not defined.".format(value.name))
             else:
                 values.append(value)
         point = Point(values[0], values[1], param_connections=parameter_connections, scatter=scatter, func=func,
@@ -176,7 +176,7 @@ class Grid(QtWidgets.QWidget):
         #print(point.__dict__['func'](5,5))
         #print(point.param_connections)
         for param in set(params):
-            self.parameter_connections[param].append(point)
+            self.parameter_connections[param.name].append(point)
         self.points.append(point)
         x, y = func(*values)
         scatter.setData([x], [y])

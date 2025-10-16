@@ -413,7 +413,7 @@ class Grid(QtWidgets.QWidget):
         self.plotWidget.setBackground("k")
         self.plotWidget.showGrid(x=True, y=True, alpha=0.3)
         self.plotWidget.setMouseEnabled(x=True, y=True)
-        self.plotWidget.setRange(xRange=[-10, 10], yRange=[-10, 10])
+        self.plotWidget.setRange(xRange=[xmin, xmax], yRange=[ymin, ymax])
         self.plotWidget.getAxis("left").setPen("w")
         self.plotWidget.getAxis("bottom").setPen("w")
         self.plotWidget.setAspectLocked(True)

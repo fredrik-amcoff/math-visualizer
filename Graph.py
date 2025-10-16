@@ -430,6 +430,7 @@ class Grid(QtWidgets.QWidget):
         self.parameters = {}
         self.parameter_values = {}
         self.parameter_connections = {}
+        self.expressions = {}
         self.points = []
 
     def add_parameter(self, name, min_val, max_val, init_val, step=1):

@@ -559,7 +559,7 @@ class Graph(QtWidgets.QWidget):
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-    def add_function(self, func, params, x_range=(-10, 10), num_points=1000, color="b", width=2):
+    def add_function(self, func, func_string, params, x_range=(-10, 10), num_points=1000, color="b", width=2):
         """
         The x variable should be the first argument in the function.
         :param func:
@@ -577,12 +577,11 @@ class Graph(QtWidgets.QWidget):
         symbols = {}
         for arg in func_arguments:
             symbols[arg] = sp.Symbol(arg)
-        print(symbols)
         parameter_connections = {}
         pvals = {key: param.value for key, param in params.items()}
         for k, v in params.items():
             parameter_connections[k] = [v.name]
-        function = Function(func, parameter_connections, pvals, x, x_range, num_points, curve)
+        function = Function(func, parameter_connections, pvals, x, x_range, num_points, curve, sp.sympify(func_string))
         for param in params.values():
             self.parameter_connections[param.name].append(function)
         y = func(x, **pvals)

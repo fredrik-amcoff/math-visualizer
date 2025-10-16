@@ -529,7 +529,34 @@ class Grid(QtWidgets.QWidget):
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-
+    def add_function(self, func, params, x_range=(-10, 10), num_points=1000, color="b", width=2):
+        """
+        The x variable should be the first argument in the function.
+        :param func:
+        :param params:
+        :param x_range:
+        :param num_points:
+        :param color:
+        :param width:
+        :return:
+        """
+        curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
+        curve.setClipToView(True)
+        x = np.linspace(x_range[0], x_range[1], num_points)
+        func_arguments = func.__code__.co_varnames
+        symbols = {}
+        for arg in func_arguments:
+            symbols[arg] = sp.Symbol(arg)
+        print(symbols)
+        parameter_connections = {}
+        pvals = {key: param.value for key, param in params.items()}
+        for k, v in params.items():
+            parameter_connections[k] = [v.name]
+        function = Function(func, parameter_connections, pvals, x, x_range, num_points, curve)
+        for param in params.values():
+            self.parameter_connections[param.name].append(function)
+        y = func(x, **pvals)
+        curve.setData(x, y)
 
 
 

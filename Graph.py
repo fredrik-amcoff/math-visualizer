@@ -417,10 +417,11 @@ class Grid():
             line = self.grid_plot.plot(x_transform[:, j], y_transform[:, j], pen=pg.mkPen(self.color))
             self.lines.append(line)
 
-class Grid(QtWidgets.QWidget):
+
+class Graph(QtWidgets.QWidget):
     def __init__(self, xmin=-10, xmax=10, ymin=-10, ymax=10):
         super().__init__()
-        self.setWindowTitle("Grid Plot")
+        self.setWindowTitle("Graph Plot")
 
         layout = QtWidgets.QVBoxLayout(self)
 

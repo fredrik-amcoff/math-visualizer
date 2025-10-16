@@ -416,7 +416,7 @@ class Grid(QtWidgets.QWidget):
         self.plotWidget.setRange(xRange=[xmin, xmax], yRange=[ymin, ymax])
         self.plotWidget.getAxis("left").setPen("w")
         self.plotWidget.getAxis("bottom").setPen("w")
-        self.plotWidget.setAspectLocked(True)
+        self.plotWidget.setAspectLocked(False)
 
         # Main axes
         axis_pen = pg.mkPen("w", width=2)

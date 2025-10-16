@@ -403,6 +403,12 @@ class Grid(QtWidgets.QWidget):
         self.slider_window.show()
         self.slider_panel = self.slider_window.layout
 
+        # Expression window
+        self.expression_window = ExpressionWindow()
+        self.expression_window.show()
+        self.expression_panel = self.expression_window.layout
+        self.hbox = None
+
         # Configure plot
         self.plotWidget.setBackground("k")
         self.plotWidget.showGrid(x=True, y=True, alpha=0.3)

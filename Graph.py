@@ -388,7 +388,7 @@ class Function():
 
 
 class Grid(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, xmin=-10, xmax=10, ymin=-10, ymax=10):
         super().__init__()
         self.setWindowTitle("Grid Plot")
 

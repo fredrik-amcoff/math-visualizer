@@ -386,6 +386,36 @@ class Function():
         self.curve.setData(self.x_space, y)
 
 
+class Grid():
+    def __init__(self, x, y, lines, param_values, transform_func, param_connections, grid_plot, x_range, y_range, num_points, color, width):
+        self.x = x
+        self.y = y
+        self.lines = lines
+        self.param_values = param_values
+        self.transform_func = transform_func
+        self.param_connections = param_connections
+        self.grid_plot = grid_plot
+        self.x_range = x_range
+        self.y_range = y_range
+        self.num_points = num_points
+        self.color = color
+        self.width = width
+
+    def update_values(self, **kwargs):
+        for line in self.lines:
+            self.grid_plot.removeItem(line)
+        self.lines = []
+
+        for key, value in kwargs.items():
+            self.param_values[key] = value
+        x_transform, y_transform = self.transform_func(self.x, self.y, *self.param_values.values())
+        for i in range(x_transform.shape[0]):
+            line = self.grid_plot.plot(x_transform[i, :], y_transform[i, :], pen=pg.mkPen(self.color))
+            self.lines.append(line)
+
+        for j in range(y_transform.shape[1]):
+            line = self.grid_plot.plot(x_transform[:, j], y_transform[:, j], pen=pg.mkPen(self.color))
+            self.lines.append(line)
 
 class Grid(QtWidgets.QWidget):
     def __init__(self, xmin=-10, xmax=10, ymin=-10, ymax=10):

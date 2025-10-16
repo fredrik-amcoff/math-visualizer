@@ -625,12 +625,29 @@ class Graph(QtWidgets.QWidget):
 
 
 app = QtWidgets.QApplication(sys.argv)
-viewer = Grid()
+viewer = Graph()
 viewer.resize(900, 700)
-test = viewer.add_parameter("test", -10, 10, 5, step=0.1)
-test2 = viewer.add_parameter("test2", -10, 10, 5, step=1)
-print(test)
-print(viewer.parameters.values())
+a = viewer.add_parameter("a", -10, 10, 5, step=0.1)
+b = viewer.add_parameter("b", -10, 10, 6, step=1)
+c = viewer.add_parameter("c", -10, 10, 7, step=1)
+d = viewer.add_parameter("d", 0, 1, 0, step=0.01)
+e = viewer.add_parameter("e", 0, 1, 0.4, step=0.05)
+
+
+#u = a + b + (a+2) + 2**(a+b) - b/2
+
+def normal(x, mu, sigma):
+    return (1/(sigma*(np.sqrt(2*np.pi))))*np.exp((-1/2)*((x-mu)/sigma)**2)
+
+u = b*(a + 1 + b)/a + sp.exp(a.expr)
+
+viewer.add_expression(u, "u")
+viewer.add_grid(transform_func=lambda x, y, d, e: ((1-e)*x + e*(x + np.sin(y)), (1-e)*y + e*(y + np.sin(x))), params={"d": d, "e": e}, color="b", x_range=(-5, 5), y_range=(-5,5), num_points=30)
+
+linspace = np.linspace(-10, 10, 100)
+
+viewer.add_point(a, b, lambda x, y: (x*y, y), color='b')
+f = viewer.add_function(lambda x, mu, sigma: (x-mu)/sigma, "(x-mu)/sigma",{"mu": a, "sigma": b})
 #viewer.add_point(1, 2, func=lambda x, y: (x, np.exp(x)))
 #viewer.add_point(5, 5)
 #for i in range(10):

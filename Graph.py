@@ -1,8 +1,15 @@
 import sys
+import warnings
+import inspect
+import ast
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
+import sympy as sp
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from sympy import diff, integrate
 
 
 class SliderWindow(QtWidgets.QWidget):

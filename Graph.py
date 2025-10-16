@@ -485,6 +485,25 @@ class Grid(QtWidgets.QWidget):
 
         # ADD REDRAW
 
+    def add_expression(self, expression, expression_name: str):
+        param_values = {p.expr: p.value for p in self.parameters.values()}
+        expression = expression.expr
+        parameter_dependencies = expression.free_symbols
+        expression_evaluation = expression.subs(param_values).evalf()
+        expression = Expression(expression_name, "", expression_evaluation, parameter_dependencies, expression)
+        expression.expression_name = expression_name
+
+
+        self.expressions[expression_name] = expression
+        self.expression_window.params = self.parameters
+
+        self.expression_window.add_expression(expression)
+        dependencies = expression.parameter_dependencies
+        for dependency in self.parameter_connections.keys():
+            if sp.sympify(dependency) in dependencies:
+                self.parameter_connections[dependency].append(expression)
+
+
     def add_point(self, X, Y, func=lambda x, y: (x, y), color="r", size=10):
         scatter = pg.ScatterPlotItem(size=size, brush=pg.mkBrush(color))
         self.plotWidget.addItem(scatter)

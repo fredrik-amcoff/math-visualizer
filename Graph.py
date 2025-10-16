@@ -29,6 +29,63 @@ class SliderWindow(QtWidgets.QWidget):
         layout.addWidget(scroll)
 
 
+class ExpressionWindow(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Expressions")
+        self.resize(500, 600)
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+
+        self.container = QtWidgets.QWidget()
+        self.main_layout = QtWidgets.QVBoxLayout(self.container)
+        scroll.setWidget(self.container)
+
+        self.expression_widgets = {}
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(scroll)
+
+    def add_expression(self, expression):
+        """Render a Sympy expression in LaTeX and add to layout"""
+        container = QtWidgets.QWidget()
+        hbox = QtWidgets.QHBoxLayout(container)
+        latex_str = sp.latex(expression.expr)
+        expression._label = QtWidgets.QLabel(f"${expression.expression_name}={latex_str}={round(expression.value, 5)}$")
+        fig = Figure(figsize=(3, 0.5))
+        canvas = FigureCanvas(fig)
+        ax = fig.add_subplot(111)
+        ax.text(0.5, 0.5, f"${expression.expression_name} = {latex_str} = {round(expression.value, 5)}$", ha='center', va='center',
+                fontsize=10)
+        ax.axis('off')
+        hbox.addWidget(canvas)
+
+        self.expression_widgets[expression.expression_name] = (canvas, ax)
+
+        self.main_layout.addWidget(container)
+
+        # Set initial value
+        #self.update_value(expression)
+
+    def update_values(self, expression):
+        """Re-evaluate and update the LaTeX rendering with numeric value."""
+        canvas, ax = self.expression_widgets[expression.expression_name]
+        ax.clear()
+        ax.axis("off")
+
+        # Evaluate numeric value with current parameter values
+        subs = {p.expr: p.value for p in self.params.values()}
+        value = expression.expr.subs(subs).evalf()
+
+        # Build LaTeX string including evaluated result
+        latex_expr = sp.latex(expression.expr)
+        latex_full = f"${expression.expression_name} = {latex_expr} = {sp.latex(round(value, 5))}$"
+
+        ax.text(0.5, 0.5, latex_full, ha="center", va="center", fontsize=10)
+        canvas.draw_idle()
+
+
 class Parameter():
     def __init__(self, name, label, slider, min_val, max_val, value, step=1):
         self.name = name

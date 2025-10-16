@@ -505,30 +505,28 @@ class Grid(QtWidgets.QWidget):
 
 
     def add_point(self, X, Y, func=lambda x, y: (x, y), color="r", size=10):
+        if not isinstance(X, (int, float)) or not isinstance(Y, (int, float)):
+            if str(X) not in self.parameters.keys() or str(Y) not in self.parameters.keys():
+                warnings.warn("Points defined from expressions are not supported. The initial value will be correct "
+                              "\nbut any updates to the expression through the parameters will be incorrect. Instead, "
+                              "\nenter pure parameters as inputs and define the transformation in the func argument.")
+        param_values = {p.expr: p.value for p in self.parameters.values()}
         scatter = pg.ScatterPlotItem(size=size, brush=pg.mkBrush(color))
         self.plotWidget.addItem(scatter)
-        values = []
-        params = []
-        parameter_connections = {}
-        for value, var in [(X, "x"), (Y, "y")]:
-            parameter_connections[var] = []
-            if type(value) == Parameter:
-                if value in self.parameters.values():
-                    values.append(value.value)
-                    params.append(value)
-                    parameter_connections[var].append(value.name)
-                else:
-                    raise NameError("Parameter {} is not defined.".format(value.name))
-            else:
-                values.append(value)
-        point = Point(values[0], values[1], param_connections=parameter_connections, scatter=scatter, func=func,
+        X = X.expr if type(X) in (Parameter, Expression) else X
+        Y = Y.expr if type(Y) in (Parameter, Expression) else Y
+        X = sp.sympify(X)
+        Y = sp.sympify(Y)
+        params = list(X.free_symbols) + list(Y.free_symbols)
+        x_eval = X.subs(param_values).evalf()
+        y_eval = Y.subs(param_values).evalf()
+        parameter_connections = {'x': [symbol.name for symbol in X.free_symbols], 'y': [symbol.name for symbol in Y.free_symbols]}
+        point = Point(x_eval, y_eval, param_connections=parameter_connections, scatter=scatter, func=func,
                       color=color, size=size)
-        #print(point.__dict__['func'](5,5))
-        #print(point.param_connections)
         for param in set(params):
-            self.parameter_connections[param.name].append(point)
+            self.parameter_connections[str(param)].append(point)
         self.points.append(point)
-        x, y = func(*values)
+        x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
 

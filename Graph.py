@@ -369,7 +369,7 @@ class Point():
 
 
 class Function():
-    def __init__(self, func, param_connections, param_values, x_space, x_range, num_points, curve):
+    def __init__(self, func, param_connections, param_values, x_space, x_range, num_points, curve, expr):
         self.func = func
         self.param_connections = param_connections
         self.param_values = param_values
@@ -377,7 +377,7 @@ class Function():
         self.x_range = x_range
         self.num_points = num_points
         self.curve = curve
-
+        self.expr = expr
 
     def update_values(self, **kwargs):
         for key, value in kwargs.items():

@@ -467,12 +467,16 @@ class Grid(QtWidgets.QWidget):
         param.update_values(param_vals["value"])
         #print(self.parameters[param_vals['name']].value)
         for obj in self.parameter_connections[param_vals['name']]:
-            param_updates = {}
-
-            for key, value in obj.param_connections.items():
-                if param_vals["name"] in value:
-                    param_updates[key] = param_vals["value"]
-            obj.update_values(**param_updates)
+            if isinstance(obj, Expression):
+                updated_value = obj.update_values(self.parameters)
+                obj._label.setText(f"{obj.name} = {obj.name}: {updated_value}")
+                self.expression_window.update_values(obj)
+            else:
+                param_updates = {}
+                for key, value in obj.param_connections.items():
+                    if param_vals["name"] in value:
+                        param_updates[key] = param_vals["value"]
+                obj.update_values(**param_updates)
             #print(param_updates)
         #print(self.points[0].x, self.points[0].y)
 

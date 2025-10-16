@@ -99,7 +99,248 @@ class Parameter():
         self.expr = sp.symbols(name)
 
     def update_values(self, new_val):
-        self.init_val = new_val
+        self.value = new_val
+
+    def __add__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other + self.expr if reverse else self.expr + other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __radd__(self, other):
+        return self.__add__(other, reverse=True)
+
+    def __sub__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other - self.expr if reverse else self.expr - other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rsub__(self, other):
+        return self.__sub__(other, reverse=True)
+
+    def __mul__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other * self.expr if reverse else self.expr * other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rmul__(self, other):
+        return self.__mul__(other, reverse=True)
+
+    def __truediv__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other / self.expr if reverse else self.expr / other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rtruediv__(self, other):
+        return self.__truediv__(other, reverse=True)
+
+    def __floordiv__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other // self.expr if reverse else self.expr // other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rfloordiv__(self, other):
+        return self.__floordiv__(other, reverse=True)
+
+    def __mod__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other % self.expr if reverse else self.expr % other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rmod__(self, other):
+        return self.__mod__(other, reverse=True)
+
+    def __pow__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other ** self.expr if reverse else self.expr ** other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rpow__(self, other):
+        return self.__pow__(other, reverse=True)
+
+    def __float__(self):
+        return float(self.value)
+
+    def __int__(self):
+        return int(self.value)
+
+    def __str__(self):
+        return self.name
+
+
+class Expression():
+    def __init__(self, name, label, value, parameter_dependencies, expr):
+        self.name = name
+        self.label = label
+        self.value = value
+        self.parameter_dependencies = parameter_dependencies
+        self.param_connections = {'params': self.parameter_dependencies}
+        self.expr = expr
+
+
+    def update_values(self, params_dict):
+        subs_dict = {p.expr: p.value for p in params_dict.values()}
+        return self.expr.subs(subs_dict)
+
+    def __add__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other + self.expr if reverse else self.expr + other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __radd__(self, other):
+        return self.__add__(other, reverse=True)
+
+    def __sub__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other - self.expr if reverse else self.expr - other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rsub__(self, other):
+        return self.__sub__(other, reverse=True)
+
+    def __mul__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other * self.expr if reverse else self.expr * other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rmul__(self, other):
+        return self.__mul__(other, reverse=True)
+
+    def __truediv__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other / self.expr if reverse else self.expr / other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rtruediv__(self, other):
+        return self.__truediv__(other, reverse=True)
+
+    def __floordiv__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other // self.expr if reverse else self.expr // other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rfloordiv__(self, other):
+        return self.__floordiv__(other, reverse=True)
+
+    def __mod__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other % self.expr if reverse else self.expr % other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rmod__(self, other):
+        return self.__mod__(other, reverse=True)
+
+    def __pow__(self, other, reverse=False):
+        if type(other) in (Parameter, Expression):
+            other_dependencies = other.parameter_dependencies
+            other = other.expr
+        else:
+            other_dependencies = {}
+        other = sp.sympify(other)
+        expression = other ** self.expr if reverse else self.expr ** other
+        params = self.parameter_dependencies | other_dependencies
+        value = expression.subs(params).evalf()
+        return Expression(str(expression), "", value, params, expression)
+
+    def __rpow__(self, other):
+        return self.__pow__(other, reverse=True)
+
+    def __float__(self):
+        return float(self.value)
+
+    def __int__(self):
+        return int(self.value)
+
 
 
 class Point():

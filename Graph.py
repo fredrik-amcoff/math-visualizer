@@ -368,6 +368,25 @@ class Point():
         self.scatter.setData([x_transform], [y_transform])
 
 
+class Function():
+    def __init__(self, func, param_connections, param_values, x_space, x_range, num_points, curve):
+        self.func = func
+        self.param_connections = param_connections
+        self.param_values = param_values
+        self.x_space = x_space
+        self.x_range = x_range
+        self.num_points = num_points
+        self.curve = curve
+
+
+    def update_values(self, **kwargs):
+        for key, value in kwargs.items():
+            self.param_values[key] = value
+        y = self.func(self.x_space, **self.param_values)
+        self.curve.setData(self.x_space, y)
+
+
+
 class Grid(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()

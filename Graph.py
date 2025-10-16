@@ -95,6 +95,8 @@ class Parameter():
         self.max_val = max_val
         self.value = value
         self.step = step
+        self.parameter_dependencies = {self.name: self.value}
+        self.expr = sp.symbols(name)
 
     def update_values(self, new_val):
         self.init_val = new_val

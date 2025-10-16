@@ -586,6 +586,41 @@ class Graph(QtWidgets.QWidget):
             self.parameter_connections[param.name].append(function)
         y = func(x, **pvals)
         curve.setData(x, y)
+        return function
+
+    def add_grid(self, x_range=(-100, 100), y_range=(-100, 100), num_points=201, transform_func=lambda x, y: (x, y), params=None, color="grey", width=2):
+
+        param_values = {p.expr: p.value for p in self.parameters.values()}
+        x_space = np.linspace(x_range[0], x_range[1], num_points)
+        y_space = np.linspace(y_range[0], y_range[1], num_points)
+        param_evals = {param_key: param_value.value for param_key, param_value in params.items()}
+        X, Y = np.meshgrid(x_space, y_space)
+        x_transform, y_transform = transform_func(X, Y, *param_evals.values())
+        grid_lines = []
+
+        parameter_connections = {}
+        for k, v in params.items():
+            parameter_connections[k] = [v.name]
+
+        grid_plot = self.plotWidget
+
+        for i in range(x_transform.shape[0]):
+            line = grid_plot.plot(x_transform[i, :], y_transform[i, :], pen=pg.mkPen(color))
+            grid_lines.append(line)
+
+        for j in range(y_transform.shape[1]):
+            line = grid_plot.plot(x_transform[:, j], y_transform[:, j], pen=pg.mkPen(color))
+            grid_lines.append(line)
+
+        grid = Grid(X, Y, grid_lines, param_evals, transform_func, parameter_connections, grid_plot, x_range, y_range, num_points, color, width)
+
+        for param in params.values():
+            self.parameter_connections[param.name].append(grid)
+
+        return grid
+
+
+
 
 
 

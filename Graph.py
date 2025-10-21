@@ -370,12 +370,13 @@ class Point():
 
 
 class Function():
-    def __init__(self, func, param_connections, param_values, x_space, x_range, num_points, curve, expr):
-        self.func = func
+    def __init__(self, x_func, y_func, param_connections, param_values, t_space, t_range, num_points, curve, expr):
+        self.x_func = x_func
+        self.y_func = y_func
         self.param_connections = param_connections
         self.param_values = param_values
-        self.x_space = x_space
-        self.x_range = x_range
+        self.t_space = t_space
+        self.t_range = t_range
         self.num_points = num_points
         self.curve = curve
         self.expr = expr
@@ -383,8 +384,9 @@ class Function():
     def update_values(self, **kwargs):
         for key, value in kwargs.items():
             self.param_values[key] = value
-        y = self.func(self.x_space, **self.param_values)
-        self.curve.setData(self.x_space, y)
+        x = self.x_func(self.t_space, **self.param_values)
+        y = self.y_func(self.t_space, **self.param_values)
+        self.curve.setData(x, y)
 
 
 class Grid():
@@ -560,32 +562,21 @@ class Graph(QtWidgets.QWidget):
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-    def add_function(self, func, func_string, params, x_range=(-10, 10), num_points=1000, color="b", width=2):
-        """
-        The x variable should be the first argument in the function.
-        :param func:
-        :param params:
-        :param x_range:
-        :param num_points:
-        :param color:
-        :param width:
-        :return:
-        """
+    def add_function(self, x_func, y_func, params, t_range=(-10, 10), num_points=1000, color="b", width=2):
         curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
         curve.setClipToView(True)
-        x = np.linspace(x_range[0], x_range[1], num_points)
-        func_arguments = func.__code__.co_varnames
-        symbols = {}
-        for arg in func_arguments:
-            symbols[arg] = sp.Symbol(arg)
+        t = np.linspace(t_range[0], t_range[1], num_points)
         parameter_connections = {}
         pvals = {key: param.value for key, param in params.items()}
         for k, v in params.items():
             parameter_connections[k] = [v.name]
-        function = Function(func, parameter_connections, pvals, x, x_range, num_points, curve, sp.sympify(func_string))
+
+        ### ÄNDRA None SENARE
+        function = Function(x_func, y_func, parameter_connections, pvals, t, t_range, num_points, curve, None)
         for param in params.values():
             self.parameter_connections[param.name].append(function)
-        y = func(x, **pvals)
+        x = x_func(t, **pvals)
+        y = y_func(t, **pvals)
         curve.setData(x, y)
         return function
 
@@ -643,7 +634,17 @@ def normal(x, mu, sigma):
 u = b*(a + 1 + b)/a + sp.exp(a.expr)
 
 viewer.add_expression(u, "u")
-viewer.add_grid(transform_func=lambda x, y, d, e: ((1-e)*x + e*(x + np.sin(y)), (1-e)*y + e*(y + np.sin(x))), params={"d": d, "e": e}, color="b", x_range=(-5, 5), y_range=(-5,5), num_points=30)
+viewer.add_grid(transform_func=lambda x, y, d, e: ((1-e)*x + e*(np.cos(x) - np.sin(y)), (1-e)*y + e*(np.sin(x) + np.cos(y))), params={"d": d, "e": e}, color="grey", x_range=(-10, 10), y_range=(-10,10), num_points=50)
+#
+#linspace = np.linspace(-10, 10, 100)
+#
+#viewer.add_point(a, b, lambda x, y: (x*sp.sin(y), y*x), color='b')
+#viewer.add_point(5, 5, lambda x, y: (x*sp.sin(y), y*x), color='b')
+#viewer.add_point(5, -5, lambda x, y: (x*sp.sin(y), y*x), color='r')
+#viewer.add_point(-5, -5, lambda x, y: (x*sp.sin(y), y*x), color='g')
+#viewer.add_point(-5, 5, lambda x, y: (x*sp.sin(y), y*x), color='y')
+f = viewer.add_function(lambda t, e: (1-e)*t + e*(np.cos(t) - np.sin(-t)), lambda t, e: (1-e)*(-t) + e*(np.sin(t) + np.cos(-t)), params={"e": e}, t_range=(-10, 10), num_points=1000, color="b", width=2)
+f_2 = viewer.add_function(lambda t, e: (1-e)*t + e*(np.cos(t) - np.sin(t)), lambda t, e: (1-e)*t + e*(np.sin(t) + np.cos(t)), params={"e": e}, t_range=(-10, 10), num_points=1000, color="red", width=2)
 
 linspace = np.linspace(-10, 10, 100)
 

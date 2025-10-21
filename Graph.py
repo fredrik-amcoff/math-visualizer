@@ -2,6 +2,7 @@ import sys
 import warnings
 import inspect
 import ast
+import math
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 import pyqtgraph as pg
@@ -87,7 +88,7 @@ class ExpressionWindow(QtWidgets.QWidget):
 
 
 class Parameter():
-    def __init__(self, name, label, slider, min_val, max_val, value, step=1):
+    def __init__(self, name, label, slider, min_val, max_val, value, step=1.0):
         self.name = name
         self.label = label
         self.slider = slider
@@ -464,7 +465,7 @@ class Graph(QtWidgets.QWidget):
         self.expressions = {}
         self.points = []
 
-    def add_parameter(self, name, min_val, max_val, init_val, step=1):
+    def add_parameter(self, name, min_val, max_val, init_val, step=1.0):
         if name in self.parameters:
             raise NameError("Parameter {} already exists".format(name))
         layout = self.slider_window.main_layout
@@ -491,7 +492,7 @@ class Graph(QtWidgets.QWidget):
 
     def _update_param(self, param):
         param_vals = param.__dict__
-        decimals = max(0, int(-np.log10(param_vals["step"])) if param_vals["step"] < 1 else 0)
+        decimals = max(0, math.ceil(-np.log10(param_vals["step"])) if param_vals["step"] < 1 else 0)
         param_vals["value"] = round(param_vals["slider"].value() * param_vals["step"], decimals)
         param_vals["label"].setText(f"{param_vals['name']}: {param_vals['value']}")
         self.parameter_values[param_vals['name']] = param_vals['value']

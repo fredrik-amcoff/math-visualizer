@@ -11,6 +11,11 @@ import sympy as sp
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from sympy import diff, integrate
+import pickle
+from pathlib import Path
+import dill
+from dataclasses import dataclass, asdict
+import json
 
 
 class SliderWindow(QtWidgets.QWidget):

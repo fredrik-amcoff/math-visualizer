@@ -670,7 +670,10 @@ class Graph(QtWidgets.QWidget):
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-    def add_function(self, x_func, y_func, params, t_range=(-10, 10), num_points=1000, color="b", width=2):
+    def add_function(self, y_func, x_func=lambda t: t, params=None, t_range=(-10, 10), num_points=1000, color="b", width=2):
+        if params is None:
+            params = {}
+        params = self._format_param_dict(params)
         curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
         curve.setClipToView(True)
         t = np.linspace(t_range[0], t_range[1], num_points)
@@ -680,7 +683,7 @@ class Graph(QtWidgets.QWidget):
             parameter_connections[k] = [v.name]
 
         ### ÄNDRA None SENARE
-        function = Function(x_func, y_func, parameter_connections, pvals, t, t_range, num_points, curve, None)
+        function = Function(x_func, y_func, params, parameter_connections, pvals, t, t_range, num_points, color, width, curve, None)
         for param in params.values():
             self.parameter_connections[param.name].append(function)
         x = x_func(t, **pvals)

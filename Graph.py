@@ -618,6 +618,13 @@ class Graph(QtWidgets.QWidget):
 
         # ADD REDRAW
 
+    def _format_param_dict(self, dict):
+        """Helper function to reformat parameter dictionaries where the parameters are entered as strings"""
+        for key, value in dict.items():
+            if isinstance(value, str):
+                dict[key] = self.parameters[value]
+        return dict
+
     def add_expression(self, expression, expression_name: str):
         param_values = {p.expr: p.value for p in self.parameters.values()}
         expression = expression.expr

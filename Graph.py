@@ -635,6 +635,7 @@ class Graph(QtWidgets.QWidget):
 
 
         self.expressions[expression_name] = expression
+        self.objects.append(expression)
         self.expression_window.params = self.parameters
 
         self.expression_window.add_expression(expression)
@@ -642,7 +643,6 @@ class Graph(QtWidgets.QWidget):
         for dependency in self.parameter_connections.keys():
             if sp.sympify(dependency) in dependencies:
                 self.parameter_connections[dependency].append(expression)
-
 
     def add_point(self, X, Y, func=lambda x, y: (x, y), color="r", size=10):
         if not isinstance(X, (int, float)) or not isinstance(Y, (int, float)):
@@ -666,6 +666,7 @@ class Graph(QtWidgets.QWidget):
         for param in set(params):
             self.parameter_connections[str(param)].append(point)
         self.points.append(point)
+        self.objects.append(point)
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
@@ -685,6 +686,7 @@ class Graph(QtWidgets.QWidget):
         x = x_func(t, **pvals)
         y = y_func(t, **pvals)
         curve.setData(x, y)
+        self.objects.append(function)
         return function
 
     def add_grid(self, x_range=(-100, 100), y_range=(-100, 100), num_points=201, transform_func=lambda x, y: (x, y), params=None, color="grey", width=2):
@@ -715,6 +717,8 @@ class Graph(QtWidgets.QWidget):
 
         for param in params.values():
             self.parameter_connections[param.name].append(grid)
+
+        self.objects.append(grid)
 
         return grid
 

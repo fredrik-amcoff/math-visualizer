@@ -107,6 +107,16 @@ class Parameter():
     def update_values(self, new_val):
         self.value = new_val
 
+    def save_data(self):
+        return ("parameter", {
+                "name": self.name,
+                "min_val": self.min_val,
+                "max_val": self.max_val,
+                "init_val": self.value,
+                "step": self.step}
+                )
+
+
     def __add__(self, other, reverse=False):
         if type(other) in (Parameter, Expression):
             other_dependencies = other.parameter_dependencies
@@ -236,6 +246,9 @@ class Expression():
         subs_dict = {p.expr: p.value for p in params_dict.values()}
         return self.expr.subs(subs_dict)
 
+    def save_data(self):
+        return ("expression", {"expression": self.expr, "expression_name": self.name})
+
     def __add__(self, other, reverse=False):
         if type(other) in (Parameter, Expression):
             other_dependencies = other.parameter_dependencies
@@ -348,7 +361,6 @@ class Expression():
         return int(self.value)
 
 
-
 class Point():
     def __init__(self, x, y, param_connections, scatter, func=lambda x, y: (x, y), color="r", size=10):
         self.x = x
@@ -373,16 +385,24 @@ class Point():
         self.y_transform = y_transform
         self.scatter.setData([x_transform], [y_transform])
 
+    def save_data(self):
+        return ("point", {"X": self.x, "Y": self.y, "func": self.func, "color": self.color, "size": self.size})
+
 
 class Function():
-    def __init__(self, x_func, y_func, param_connections, param_values, t_space, t_range, num_points, curve, expr):
+    def __init__(self, x_func, y_func, params, param_connections, param_values, t_space, t_range, num_points, color, width, curve, expr):
         self.x_func = x_func
         self.y_func = y_func
+        self.params = {}
+        for k, v in params.items():
+            self.params = {k: str(v)}
         self.param_connections = param_connections
         self.param_values = param_values
         self.t_space = t_space
         self.t_range = t_range
         self.num_points = num_points
+        self.color = color
+        self.width = width
         self.curve = curve
         self.expr = expr
 
@@ -393,12 +413,50 @@ class Function():
         y = self.y_func(self.t_space, **self.param_values)
         self.curve.setData(x, y)
 
+    def save_data(self):
+        return ("function", {
+                "x_func": self.x_func,
+                "y_func": self.y_func,
+                "params": self.params,
+                "t_range": self.t_range,
+                "num_points": self.num_points,
+                "color": self.color,
+                "width": self.width})
+
+
+class Vector:
+    def __init__(self, line, start, vec, params, param_values, color, width):
+        self.line = line
+        self.start = start
+        self.vec = vec
+        for k, v in params.items():
+            self.params = {k: str(v)}
+        self.color = color
+        self.width = width
+        self.param_values = param_values
+
+    def update_values(self, **kwargs):
+        for key, value in kwargs.items():
+            self.param_values[key] = value
+
+        self.line.setData(x, y)
+
+    def save_data(self):
+        return ("vector", {
+                "vec": self.vec,
+                "params": self.params,
+                "start": self.start,
+                "color": self.color,
+                "width": self.width})
+
 
 class Grid():
-    def __init__(self, x, y, lines, param_values, transform_func, param_connections, grid_plot, x_range, y_range, num_points, color, width):
+    def __init__(self, x, y, lines, params, param_values, transform_func, param_connections, grid_plot, x_range, y_range, num_points, color, width):
         self.x = x
         self.y = y
         self.lines = lines
+        for k, v in params.items():
+            self.params = {k: str(v)}
         self.param_values = param_values
         self.transform_func = transform_func
         self.param_connections = param_connections
@@ -424,6 +482,16 @@ class Grid():
         for j in range(y_transform.shape[1]):
             line = self.grid_plot.plot(x_transform[:, j], y_transform[:, j], pen=pg.mkPen(self.color))
             self.lines.append(line)
+
+    def save_data(self):
+        return ("grid", {
+                "x_range": self.x_range,
+                "y_range": self.y_range,
+                "num_points": self.num_points,
+                "transform_func": self.transform_func,
+                "params": self.params,
+                "color": self.color,
+                "width": self.width})
 
 
 class Graph(QtWidgets.QWidget):
@@ -471,6 +539,32 @@ class Graph(QtWidgets.QWidget):
         self.parameter_connections = {}
         self.expressions = {}
         self.points = []
+        self.objects = []
+
+    def save_config(self, filename, filepath="saves"):
+        data = []
+        for obj in self.objects:
+            data.append(obj.save_data())
+        path = Path(f"{filepath}/{filename}.pkl")
+        with path.open("wb") as f:
+            dill.dump(data, f, protocol=dill.HIGHEST_PROTOCOL)
+
+    def load_config(self, filename, filepath="saves"):
+        object_operations_map = {
+            "parameter": self.add_parameter,
+            "expression": self.add_expression,
+            "point": self.add_point,
+            "function": self.add_function,
+            "grid": self.add_grid,
+            "vector": self.add_vector
+        }
+        path = Path(f"{filepath}/{filename}.pkl")
+        with path.open("rb") as f:
+            loaded_data = dill.load(f)
+        for obj in loaded_data:
+            type, kwargs = obj
+            print(type, kwargs)
+            object_operations_map[type](**kwargs)
 
     def add_parameter(self, name, min_val, max_val, init_val, step=1.0):
         if name in self.parameters:
@@ -495,6 +589,7 @@ class Graph(QtWidgets.QWidget):
         self.parameters[name] = param
         self.parameter_values[name] = init_val
         self.parameter_connections[name] = []
+        self.objects.append(param)
         return param
 
     def _update_param(self, param):

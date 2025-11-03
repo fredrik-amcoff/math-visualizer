@@ -722,6 +722,34 @@ class Graph(QtWidgets.QWidget):
 
         return grid
 
+    def add_vector(self, vec, params=None, start=(0, 0), color="b", width=2):
+        if params is None:
+            params = {}
+        line = self.plotWidget.plot(pen=pg.mkPen(color), width=width)
+        parameter_connections = {}
+        pvals = {key: param.value for key, param in params.items()}
+        for k, v in params.items():
+            parameter_connections[k] = [v.name]
+
+        vector = Vector(line, start, vec, params, pvals, color, width)
+        for param in params.values():
+            self.parameter_connections[param.name].append(vector)
+
+        line.setClipToView(True)
+        line.setData([start[0], start[0] + vec[0]], [start[1], start[1] + vec[1]])
+
+        arrow = pg.ArrowItem(
+            pos=[start[0] + vec[0], start[1] + vec[1]],
+            angle=np.degrees(np.arctan2(vec[1], -vec[0])),
+            brush=color,
+            headLen=15
+        )
+
+        self.objects.append(arrow)
+
+        #self.plotWidget.addItem(arrow)
+
+
 
 
 

@@ -531,7 +531,7 @@ class Vector:
 
 
 class Grid():
-    def __init__(self, x, y, lines, params, param_values, transform_func, param_connections, grid_plot, x_range, y_range, num_points, color, width):
+    def __init__(self, x, y, lines, params, param_values, transform_func, symbols, expr, param_connections, grid_plot, x_range, y_range, num_points, color, width):
         self.x = x
         self.y = y
         self.lines = lines
@@ -539,6 +539,8 @@ class Grid():
             self.params = {k: str(v)}
         self.param_values = param_values
         self.transform_func = transform_func
+        self.symbols = symbols
+        self.expr = expr
         self.param_connections = param_connections
         self.grid_plot = grid_plot
         self.x_range = x_range
@@ -554,7 +556,8 @@ class Grid():
 
         for key, value in kwargs.items():
             self.param_values[key] = value
-        x_transform, y_transform = self.transform_func(self.x, self.y, *self.param_values.values())
+        x_transform, y_transform = sp.lambdify(self.symbols, self.expr, modules=["numpy", "scipy"])(self.x, self.y, *self.param_values.values())
+        #x_transform, y_transform = self.transform_func(self.x, self.y, *self.param_values.values())
         for i in range(x_transform.shape[0]):
             line = self.grid_plot.plot(x_transform[i, :], y_transform[i, :], pen=pg.mkPen(self.color))
             self.lines.append(line)

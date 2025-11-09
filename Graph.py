@@ -378,7 +378,7 @@ class Point():
         self.color = color
         self.size = size
 
-    def update_values(self, **kwargs):
+    def update_values(self, x_range, y_range, **kwargs):
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
@@ -387,6 +387,8 @@ class Point():
         x_transform, y_transform = self.func(self.x, self.y)
         self.x_transform = x_transform
         self.y_transform = y_transform
+        print(x_transform, y_transform)
+        print(self.x, self.y)
         self.scatter.setData([x_transform], [y_transform])
 
     def save_data(self):

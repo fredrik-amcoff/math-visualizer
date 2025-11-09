@@ -710,9 +710,9 @@ class Graph(QtWidgets.QWidget):
             else:
                 param_updates = {}
                 for key, value in obj.param_connections.items():
-                    if param_vals["name"] in value:
-                        param_updates[key] = param_vals["value"]
-                obj.update_values(**param_updates)
+                    if param.name in value:
+                        param_updates[key] = param.value
+                obj.update_values(self.x_view_range, self.y_view_range, **param_updates)
             #print(param_updates)
         #print(self.points[0].x, self.points[0].y)
 

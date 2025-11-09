@@ -919,7 +919,7 @@ class Graph(QtWidgets.QWidget):
             line = grid_plot.plot(x_transform[:, j], y_transform[:, j], pen=pg.mkPen(color))
             grid_lines.append(line)
 
-        grid = Grid(X, Y, grid_lines, params, param_evals, transform_func, parameter_connections, grid_plot, x_range, y_range, num_points, color, width)
+        grid = Grid(X, Y, grid_lines, params, param_evals, transform_func, symbols, expr, parameter_connections, grid_plot, x_range, y_range, num_points, color, width)
 
         for param in params.values():
             self.parameter_connections[param.name].append(grid)

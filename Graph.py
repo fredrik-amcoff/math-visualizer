@@ -97,7 +97,7 @@ class ExpressionWindow(QtWidgets.QWidget):
 
 
 class Parameter():
-    def __init__(self, name, label, slider, min_val, max_val, value, step=1.0):
+    def __init__(self, name, label, slider, min_val, max_val, value, step):
         self.name = name
         self.label = label
         self.slider = slider

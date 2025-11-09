@@ -578,7 +578,7 @@ class Grid():
 
 
 class Graph(QtWidgets.QWidget):
-    def __init__(self, xmin=-10, xmax=10, ymin=-10, ymax=10):
+    def __init__(self, xmin=-10, xmax=10, ymin=-10, ymax=10, bg_color="w", left_color="k", bottom_color="k", axis_color="k", axis_width=2):
         super().__init__()
         self.setWindowTitle("Graph Plot")
 
@@ -600,16 +600,19 @@ class Graph(QtWidgets.QWidget):
         self.hbox = None
 
         # Configure plot
-        self.plotWidget.setBackground("k")
+        self.plotWidget.setBackground(bg_color)
         self.plotWidget.showGrid(x=True, y=True, alpha=0.3)
         self.plotWidget.setMouseEnabled(x=True, y=True)
         self.plotWidget.setRange(xRange=[xmin, xmax], yRange=[ymin, ymax])
-        self.plotWidget.getAxis("left").setPen("w")
-        self.plotWidget.getAxis("bottom").setPen("w")
+        self.plotWidget.getAxis("left").setPen(left_color)
+        self.plotWidget.getAxis("bottom").setPen(bottom_color)
         self.plotWidget.setAspectLocked(False)
+        self.x_view_range = (xmin, xmax)
+        self.y_view_range = (ymin, ymax)
+        self.plotWidget.getViewBox().sigRangeChanged.connect(self._update_range)
 
         # Main axes
-        axis_pen = pg.mkPen("w", width=2)
+        axis_pen = pg.mkPen(axis_color, width=axis_width)
         self.plotWidget.addItem(pg.InfiniteLine(angle=0, pen=axis_pen))  # X-axis
         self.plotWidget.addItem(pg.InfiniteLine(angle=90, pen=axis_pen))  # Y-axis
 

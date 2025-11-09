@@ -17,6 +17,9 @@ from pathlib import Path
 import dill
 from dataclasses import dataclass, asdict
 import json
+import inspect
+import scipy
+from itertools import product
 
 
 class SliderWindow(QtWidgets.QWidget):

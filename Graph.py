@@ -868,7 +868,16 @@ class Graph(QtWidgets.QWidget):
         # Basic data
 
         params = self._format_param_dict(params)
-        param_values = {p.expr: p.value for p in self.parameters.values()}
+
+        variables = inspect.signature(transform_func)
+
+        symbols = sp.symbols(list(variables.parameters))
+
+        vals, params = self._get_single_values(variables.parameters, params, skip_first=2)
+
+        expr = transform_func(*symbols)
+
+        # Meshgrid data
         x_space = np.linspace(x_range[0], x_range[1], num_points)
         y_space = np.linspace(y_range[0], y_range[1], num_points)
         param_evals = {param_key: param_value.value for param_key, param_value in params.items()}

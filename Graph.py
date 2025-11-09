@@ -8,6 +8,7 @@ from PyQt5 import QtWidgets, QtCore
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import sympy as sp
+from sympy import exp, sin, cos, oo
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from sympy import diff, integrate

@@ -665,9 +665,13 @@ class Graph(QtWidgets.QWidget):
             print(type, kwargs)
             object_operations_map[type](**kwargs)
 
-    def add_parameter(self, name, min_val, max_val, init_val, step=1.0):
+    def add_parameter(self, name, min_val, max_val, init_val, steps=None):
         if name in self.parameters:
             raise NameError("Parameter {} already exists".format(name))
+        if steps is None:
+            steps = (max_val - min_val)*10
+        step_size = (max_val - min_val)/steps
+
         layout = self.slider_window.main_layout
 
         container = QtWidgets.QWidget()
@@ -675,30 +679,30 @@ class Graph(QtWidgets.QWidget):
 
         label = QtWidgets.QLabel(f"{name}: {init_val}")
         slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        slider.setRange(int(min_val / step), int(max_val / step))
-        slider.setValue(int(init_val / step))
+        slider.setRange(int(min_val / step_size), int(max_val / step_size))
+        slider.setValue(int(init_val / step_size))
         slider.setSingleStep(1)
 
         hbox.addWidget(label)
         hbox.addWidget(slider)
         layout.addWidget(container)
 
-        param = Parameter(name, label, slider, min_val, max_val, init_val, step)
+        param = Parameter(name, label, slider, min_val, max_val, init_val, steps)
         slider.valueChanged.connect(lambda _: self._update_param(param))
         self.parameters[name] = param
-        self.parameter_values[name] = init_val
+        self.single_values[name] = ('parameter', init_val)
         self.parameter_connections[name] = []
         self.objects.append(param)
         return param
 
     def _update_param(self, param):
-        param_vals = param.__dict__
-        decimals = max(0, math.ceil(-np.log10(param_vals["step"])) if param_vals["step"] < 1 else 0)
-        param_vals["value"] = round(param_vals["slider"].value() * param_vals["step"], decimals)
-        param_vals["label"].setText(f"{param_vals['name']}: {param_vals['value']}")
-        self.parameter_values[param_vals['name']] = param_vals['value']
-        param.update_values(param_vals["value"])
-        for obj in self.parameter_connections[param_vals['name']]:
+        step_size = (param.max_val - param.min_val) / param.step
+        decimals = max(0, math.ceil(-np.log10(step_size)) if step_size < 1 else 0)
+        param.value = round(param.slider.value() * step_size, decimals)
+        param.label.setText(f"{param.name}: {param.value}")
+        self.single_values[param.name] = ("parameter", param.value)
+        param.update_values(param.value)
+        for obj in self.parameter_connections[param.name]:
             if isinstance(obj, Expression):
                 updated_value = obj.update_values(self.parameters)
                 obj._label.setText(f"{obj.name} = {obj.name}: {updated_value}")

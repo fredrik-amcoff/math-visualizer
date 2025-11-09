@@ -882,7 +882,24 @@ class Graph(QtWidgets.QWidget):
         y_space = np.linspace(y_range[0], y_range[1], num_points)
         param_evals = {param_key: param_value.value for param_key, param_value in params.items()}
         X, Y = np.meshgrid(x_space, y_space)
-        x_transform, y_transform = transform_func(X, Y, *param_evals.values())
+
+        ## Precompute
+        #if precompute:
+        #    param_arrays = []
+        #    for param in params.values():
+        #        min_val = param.min_val
+        #        max_val = param.max_val
+        #        steps = param.step
+        #        possible_values = np.linspace(min_val, max_val, steps + 1)
+        #        param_arrays.append(possible_values)
+        #    param_permutations = np.array(list(product(*param_arrays)))
+        #    print(len(param_permutations))
+
+
+
+        # Set initial value
+
+        x_transform, y_transform = sp.lambdify(symbols, expr, modules=["numpy", "scipy"])(X, Y, *param_evals.values())
         grid_lines = []
 
         parameter_connections = {}

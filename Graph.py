@@ -728,6 +728,23 @@ class Graph(QtWidgets.QWidget):
                 dict[key] = self.parameters[value]
         return dict
 
+    def _get_single_values(self, var_list, params, skip_first=0):
+        pvals = {}
+        pdict = {}
+        for key in list(var_list)[skip_first:]:
+            try:
+                pvals[key] = params[key].value
+                pdict[key] = params[key]
+            except KeyError:
+                if key in self.single_values:
+                    type, value = self.single_values[key]
+                    pvals[key] = value
+                    pdict[key] = self.parameters[key]
+                    warnings.warn(f"Variable {key} not specified, assumes added {type} {key}.")
+                else:
+                    raise KeyError(f"Variable {key} not defined.")
+        return pvals, pdict
+
     def add_expression(self, expression, expression_name: str):
         param_values = {p.expr: p.value for p in self.parameters.values()}
         expression = expression.expr
@@ -739,6 +756,7 @@ class Graph(QtWidgets.QWidget):
 
         self.expressions[expression_name] = expression
         self.objects.append(expression)
+        self.single_values[expression_name] = ("expression" ,expression_evaluation)
         self.expression_window.params = self.parameters
 
         self.expression_window.add_expression(expression)
@@ -746,6 +764,8 @@ class Graph(QtWidgets.QWidget):
         for dependency in self.parameter_connections.keys():
             if sp.sympify(dependency) in dependencies:
                 self.parameter_connections[dependency].append(expression)
+
+        return expression
 
     def add_point(self, X, Y, func=lambda x, y: (x, y), color="r", size=10):
         if not isinstance(X, (int, float)) or not isinstance(Y, (int, float)):

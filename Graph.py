@@ -921,6 +921,7 @@ class Graph(QtWidgets.QWidget):
 
         grid = Grid(X, Y, grid_lines, params, param_evals, transform_func, symbols, expr, parameter_connections, grid_plot, x_range, y_range, num_points, color, width)
 
+        # Add to Graph parameter connections
         for param in params.values():
             self.parameter_connections[param.name].append(grid)
 

@@ -930,6 +930,7 @@ class Graph(QtWidgets.QWidget):
         return grid
 
     def add_vector(self, vec, params=None, start=(0, 0), color="b", width=2):
+        """Work in progress"""
         if params is None:
             params = {}
         line = self.plotWidget.plot(pen=pg.mkPen(color), width=width)

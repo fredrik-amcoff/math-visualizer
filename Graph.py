@@ -964,50 +964,24 @@ class Graph(QtWidgets.QWidget):
 
 
 app = QtWidgets.QApplication(sys.argv)
-viewer = Graph()
-viewer.resize(900, 700)
-a = viewer.add_parameter("a", -10, 10, 5, step=0.1)
-b = viewer.add_parameter("b", -10, 10, 6, step=1)
-c = viewer.add_parameter("c", -10, 10, 7, step=1)
-d = viewer.add_parameter("d", 0, 1, 0, step=0.01)
-e = viewer.add_parameter("e", 0, 1, 0.4, step=0.05)
+viewer = Graph(xmin=-1, xmax=1, ymin=-1, ymax=1)
+viewer.resize(900, 900)
+
+a = viewer.add_parameter("a", 0, 1, 1, 50)
+b = viewer.add_parameter("b", 0, 100, 15, 100)
+e = viewer.add_parameter("e", 0, 10, 5, 100)
+f = viewer.add_parameter("f", 0, 10, 5, 100)
+R = 6
+r = 1
+d = 1
+#viewer.add_grid(transform_func=lambda x, y, c, d, e, f: (e+c*sp.sin(x), f+d*c*sp.sin(y)), params={"c": a, "d": b})
+viewer.add_function(lambda x, b: (b-r)*cos(x) + d*cos(((b-r)/r)*x), x_func=lambda x, b: (b-r)*sin(x) + d*sin(((b-r)/r)*x), num_points=1000, t_range=(0, 2*np.pi), width=1)
+f = viewer.add_function(lambda x, a: sin(a*x), t_range=(-10, 10), num_points=100)
+f = viewer.add_function(y_func=lambda x, a: x, x_func=lambda x, a: cos(a*x), t_range=(-10, 10), num_points=100)
 
 
-#u = a + b + (a+2) + 2**(a+b) - b/2
+#viewer.save_config("test")
+#viewer.load_config("test")
 
-def normal(x, mu, sigma):
-    return (1/(sigma*(np.sqrt(2*np.pi))))*np.exp((-1/2)*((x-mu)/sigma)**2)
-
-u = b*(a + 1 + b)/a + sp.exp(a.expr)
-
-viewer.add_expression(u, "u")
-viewer.add_grid(transform_func=lambda x, y, d, e: ((1-e)*x + e*(np.cos(x) - np.sin(y)), (1-e)*y + e*(np.sin(x) + np.cos(y))), params={"d": d, "e": e}, color="grey", x_range=(-10, 10), y_range=(-10,10), num_points=50)
-#
-#linspace = np.linspace(-10, 10, 100)
-#
-#viewer.add_point(a, b, lambda x, y: (x*sp.sin(y), y*x), color='b')
-#viewer.add_point(5, 5, lambda x, y: (x*sp.sin(y), y*x), color='b')
-#viewer.add_point(5, -5, lambda x, y: (x*sp.sin(y), y*x), color='r')
-#viewer.add_point(-5, -5, lambda x, y: (x*sp.sin(y), y*x), color='g')
-#viewer.add_point(-5, 5, lambda x, y: (x*sp.sin(y), y*x), color='y')
-f = viewer.add_function(lambda t, e: (1-e)*t + e*(np.cos(t) - np.sin(-t)), lambda t, e: (1-e)*(-t) + e*(np.sin(t) + np.cos(-t)), params={"e": e}, t_range=(-10, 10), num_points=1000, color="b", width=2)
-f_2 = viewer.add_function(lambda t, e: (1-e)*t + e*(np.cos(t) - np.sin(t)), lambda t, e: (1-e)*t + e*(np.sin(t) + np.cos(t)), params={"e": e}, t_range=(-10, 10), num_points=1000, color="red", width=2)
-
-linspace = np.linspace(-10, 10, 100)
-
-viewer.add_point(a, b, lambda x, y: (x*y, y), color='b')
-f = viewer.add_function(lambda x, mu, sigma: (x-mu)/sigma, "(x-mu)/sigma",{"mu": a, "sigma": b})
-#viewer.add_point(1, 2, func=lambda x, y: (x, np.exp(x)))
-#viewer.add_point(5, 5)
-#for i in range(10):
-#    for j in range(10):
-#        #viewer.add_point(i*3 , j *2)
-#        viewer.add_point("test", "test", func=lambda x, y, i=i + 1, j=j + 1: (i, np.exp(x)), color="b", size=10)
-
-#print(point.__dict__['func'] for point in viewer.points)
-#for point in viewer.points:
-#    print(point.__dict__['func'](5,5))
-#for connection in viewer.parameter_connections['test']:
-#    print(connection.__dict__['func'](5,5))
 viewer.show()
 sys.exit(app.exec_())

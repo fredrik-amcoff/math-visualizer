@@ -902,9 +902,12 @@ class Graph(QtWidgets.QWidget):
         x_transform, y_transform = sp.lambdify(symbols, expr, modules=["numpy", "scipy"])(X, Y, *param_evals.values())
         grid_lines = []
 
+        # Add to object parameter connections
         parameter_connections = {}
         for k, v in params.items():
             parameter_connections[k] = [v.name]
+
+        # Plot lines
 
         grid_plot = self.plotWidget
 

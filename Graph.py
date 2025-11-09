@@ -396,28 +396,102 @@ class Point():
 
 
 class Function():
-    def __init__(self, x_func, y_func, params, param_connections, param_values, t_space, t_range, num_points, color, width, curve, expr):
+    def __init__(self, x_func, y_func, params, param_connections, y_values, x_values, t_space, t_range, num_points,
+                 color, width, curve, y_expr, x_expr, y_symbols, x_symbols, type, initial_parametric_resolution):
         self.x_func = x_func
         self.y_func = y_func
         self.params = {}
         for k, v in params.items():
             self.params = {k: str(v)}
         self.param_connections = param_connections
-        self.param_values = param_values
+        self.y_values = y_values
+        self.x_values = x_values
         self.t_space = t_space
         self.t_range = t_range
         self.num_points = num_points
         self.color = color
         self.width = width
         self.curve = curve
-        self.expr = expr
+        self.y_expr = y_expr
+        self.x_expr = x_expr
+        self.y_symbols = y_symbols
+        self.x_symbols = x_symbols
+        self.type = type
+        self.initial_parametric_resolution = int(initial_parametric_resolution)
 
-    def update_values(self, **kwargs):
+    def update_values(self, x_range, y_range, **kwargs):
         for key, value in kwargs.items():
-            self.param_values[key] = value
-        x = self.x_func(self.t_space, **self.param_values)
-        y = self.y_func(self.t_space, **self.param_values)
-        self.curve.setData(x, y)
+            if key in self.x_values:
+                self.x_values[key] = value
+            if key in self.y_values:
+                self.y_values[key] = value
+
+        if self.type == "x_cartesian":
+            t_space = np.linspace(max(self.t_range[0], y_range[0]), min(self.t_range[1], y_range[1]), self.num_points)
+            x = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_space, **self.x_values)
+            y = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_space, **self.y_values)
+            self.curve.setData(x, y)
+            return
+        elif self.type == "y_cartesian":
+            t_space = np.linspace(max(self.t_range[0], x_range[0]), min(self.t_range[1], x_range[1]), self.num_points)
+            x = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_space, **self.x_values)
+            y = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_space, **self.y_values)
+            self.curve.setData(x, y)
+            return
+        else:
+            t_space = np.linspace(self.t_range[0], self.t_range[1], self.initial_parametric_resolution)
+
+        x = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_space, **self.x_values)
+        y = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_space, **self.y_values)
+
+        if self.type == "parametric":
+            visible_mask = (
+                    (x >= x_range[0]) & (x <= x_range[1]) &
+                    (y >= y_range[0]) & (y <= y_range[1])
+            )
+            visible_part = np.mean(visible_mask)  # percentage of parametric curve inside of the viewing window
+
+            if not np.any(visible_mask):
+                # Nothing visible
+                self.curve.setData([], [])
+            visible_indices = np.where(visible_mask)[0]
+            groups = np.split(visible_indices, np.where(np.diff(visible_indices) > 1)[0] + 1)
+            x_segments, y_segments = [], []
+
+            if len(groups[0]) > 0:  # If curve is inside viewing window
+                for g in groups:
+                    t_min, t_max = t_space[g[0]], t_space[g[-1]]  # t_range for group g
+                    # Group range is the percentage of the visible part of the curve in group g
+                    group_range = ((t_max - t_min) / (self.t_range[1] - self.t_range[0])) / visible_part
+
+                    # Each group gets a minimum of 5 rendered points, otherwise the corresponding percentage of the
+                    # total points
+                    # The sum of num_visible_points for all groups roughly add up to self.num_points
+                    num_visible_points = max(5, int(self.num_points * group_range))  # number of points per g
+
+                    t_dense = np.linspace(t_min, t_max, num_visible_points)
+                    x_dense = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_dense,
+                                                                                                   **self.x_values)
+                    y_dense = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_dense,
+                                                                                                   **self.y_values)
+                    x_segments.append(x_dense)
+                    y_segments.append(y_dense)
+
+                x_parts, y_parts = [], []
+                for x_seg, y_seg in zip(x_segments, y_segments):
+                    x_parts.append(x_seg)
+                    y_parts.append(y_seg)
+
+                    # NaN is inserted at all points where a group ends to indicate discontinuity
+                    x_parts.append(np.array([np.nan]))
+                    y_parts.append(np.array([np.nan]))
+
+                x = np.concatenate(x_parts)
+                y = np.concatenate(y_parts)
+
+                self.curve.setData(x, y)
+
+
 
     def save_data(self):
         return ("function", {
@@ -536,16 +610,29 @@ class Graph(QtWidgets.QWidget):
         self.plotWidget.addItem(pg.InfiniteLine(angle=0, pen=axis_pen))  # X-axis
         self.plotWidget.addItem(pg.InfiniteLine(angle=90, pen=axis_pen))  # Y-axis
 
-        self.unit_square_orig = self.plotWidget.plot(pen=pg.mkPen("w", width=2))
-        self.unit_square_trans = self.plotWidget.plot(pen=pg.mkPen("orange", width=2))
-
         # References
         self.parameters = {}
-        self.parameter_values = {}
+        self.single_values = {}
         self.parameter_connections = {}
         self.expressions = {}
+        self.functions = []
         self.points = []
         self.objects = []
+
+    def _get_param_values(self, params):
+        """Helper function for getting parameter values from list of parameters"""
+        return {key: value[1] for key, value in self.single_values.items() if key in params}
+
+    def _update_range(self):
+        vb = self.plotWidget.getViewBox()
+        x_range, y_range = vb.viewRange()
+        self.x_view_range = x_range
+        self.y_view_range = y_range
+
+        for func in self.functions:
+            param_values = func.y_values
+            #x_range = (np.max(x_range[0], func.x_range[0]), np.max(x_range[1], func.x_range[1]))
+            func.update_values(x_range, y_range, **param_values)
 
     def save_config(self, filename, filepath="saves"):
         data = []
@@ -676,26 +763,72 @@ class Graph(QtWidgets.QWidget):
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-    def add_function(self, y_func, x_func=lambda t: t, params=None, t_range=(-10, 10), num_points=1000, color="b", width=2):
+    def add_function(self, y_func, x_func=None, params=None, t_range=(-100, 100), num_points=100, initial_parametric_resolution=int(10e5), color="b", width=2):
+        """
+        Default is normal function. By adding a x_func, it is also possible to create a parametric function.
+        Main variable should be the first one in both y_func and x_func.
+        :param y_func: Function that takes in numerical argument and returns numerical value. Main variable first.
+        :param x_func: Additional function to allow for parametric function. Main variable first.
+        :param params: Dictionary of parameters, {"a": a, "b": b,...}
+        :param t_range: Domain of the function
+        :param num_points: Graph resolution
+        :param color: color
+        :param width: width
+        :return: Function object
+        """
+
         if params is None:
             params = {}
+        if x_func is None:
+            x_func = lambda t: t
+
         params = self._format_param_dict(params)
         curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
         curve.setClipToView(True)
         t = np.linspace(t_range[0], t_range[1], num_points)
         parameter_connections = {}
-        pvals = {key: param.value for key, param in params.items()}
-        for k, v in params.items():
+
+        y_vars = inspect.signature(y_func)
+        x_vars = inspect.signature(x_func)
+
+        y_symbols = sp.symbols(list(y_vars.parameters))
+        x_symbols = sp.symbols(list(x_vars.parameters))
+
+        y_vals, y_params = self._get_single_values(y_vars.parameters, params, skip_first=1)
+        x_vals, x_params = self._get_single_values(x_vars.parameters, params, skip_first=1)
+
+        y_expr = y_func(*y_symbols)
+        x_expr = x_func(*x_symbols)
+
+        params = dict(y_params, **x_params)
+
+        for k, v in y_params.items():
+            parameter_connections[k] = [v.name]
+        for k, v in x_params.items():
             parameter_connections[k] = [v.name]
 
-        ### ÄNDRA None SENARE
-        function = Function(x_func, y_func, params, parameter_connections, pvals, t, t_range, num_points, color, width, curve, None)
-        for param in params.values():
-            self.parameter_connections[param.name].append(function)
-        x = x_func(t, **pvals)
-        y = y_func(t, **pvals)
+        x = sp.lambdify(x_symbols, x_expr, modules=["numpy", "scipy"])(t, **x_vals)
+        y = sp.lambdify(y_symbols, y_expr, modules=["numpy", "scipy"])(t, **y_vals)
+
+        if np.array_equal(y, t):
+            type = "x_cartesian"  # x = f(y)
+        elif np.array_equal(x, t):
+            type = "y_cartesian"  # y = f(x)
+        else:
+            type = "parametric"  # x = f(t), y = g(t)
+
+
+        function = Function(x_func, y_func, params, parameter_connections, y_vals, x_vals, t, t_range, num_points,
+                            color, width, curve, y_expr, x_expr, y_symbols, x_symbols, type,
+                            initial_parametric_resolution)
+
+        for param in dict(y_vals, **x_vals):
+            param_name = params[param].name
+            self.parameter_connections[param_name].append(function)
+
         curve.setData(x, y)
         self.objects.append(function)
+        self.functions.append(function)
         return function
 
     def add_grid(self, x_range=(-100, 100), y_range=(-100, 100), num_points=201, transform_func=lambda x, y: (x, y), params=None, color="grey", width=5):

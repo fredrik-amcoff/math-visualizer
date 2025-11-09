@@ -864,6 +864,9 @@ class Graph(QtWidgets.QWidget):
     def add_grid(self, x_range=(-100, 100), y_range=(-100, 100), num_points=201, transform_func=lambda x, y: (x, y), params=None, color="grey", width=5):
         if params is None:
             params = {}
+
+        # Basic data
+
         params = self._format_param_dict(params)
         param_values = {p.expr: p.value for p in self.parameters.values()}
         x_space = np.linspace(x_range[0], x_range[1], num_points)

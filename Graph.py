@@ -258,7 +258,7 @@ class Expression():
             other_dependencies = other.parameter_dependencies
             other = other.expr
         else:
-            other_dependencies = {}
+            other_dependencies = {}  # possible bug, can be solved by changing to set() instead
         other = sp.sympify(other)
         expression = other + self.expr if reverse else self.expr + other
         params = self.parameter_dependencies | other_dependencies

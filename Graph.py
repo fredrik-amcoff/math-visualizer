@@ -784,7 +784,7 @@ class Graph(QtWidgets.QWidget):
         x_eval = X.subs(param_values).evalf()
         y_eval = Y.subs(param_values).evalf()
         parameter_connections = {'x': [symbol.name for symbol in X.free_symbols], 'y': [symbol.name for symbol in Y.free_symbols]}
-        point = Point(x_eval, y_eval, param_connections=parameter_connections, scatter=scatter, func=func,
+        point = Point(X, Y, param_connections=parameter_connections, scatter=scatter, func=func,
                       color=color, size=size)
         for param in set(params):
             self.parameter_connections[str(param)].append(point)

@@ -892,71 +892,68 @@ class Graph(QtWidgets.QWidget):
         self.functions.append(function)
         return function
 
-    def add_grid(self, x_range=(-100, 100), y_range=(-100, 100), num_points=201, transform_func=lambda x, y: (x, y), params=None, color="grey", width=5):
+    def add_grid(self, x_range=(-10, 10), y_range=(-10, 10), num_lines=21, x_func=lambda x, y: x, y_func=lambda x, y: y, params=None, num_points=1000, color="grey", width=2, alpha=0.9):
         if params is None:
             params = {}
 
-        # Basic data
+        y_vars = inspect.signature(y_func)
+        x_vars = inspect.signature(x_func)
 
-        params = self._format_param_dict(params)
+        y_symbols = sp.symbols(list(y_vars.parameters))
+        x_symbols = sp.symbols(list(x_vars.parameters))
 
-        variables = inspect.signature(transform_func)
+        y_vals, y_params = self._get_single_values(y_vars.parameters, params, skip_first=2)
+        x_vals, x_params = self._get_single_values(x_vars.parameters, params, skip_first=2)
 
-        symbols = sp.symbols(list(variables.parameters))
+        y_expr = y_func(*y_symbols)
+        x_expr = x_func(*x_symbols)
 
-        vals, params = self._get_single_values(variables.parameters, params, skip_first=2)
-
-        expr = transform_func(*symbols)
+        params = dict(y_params, **x_params)
 
         # Meshgrid data
+        x_lines = np.linspace(x_range[0], x_range[1], num_lines)
+        y_lines = np.linspace(y_range[0], y_range[1], num_lines)
         x_space = np.linspace(x_range[0], x_range[1], num_points)
         y_space = np.linspace(y_range[0], y_range[1], num_points)
-        param_evals = {param_key: param_value.value for param_key, param_value in params.items()}
-        X, Y = np.meshgrid(x_space, y_space)
 
-        ## Precompute
-        #if precompute:
-        #    param_arrays = []
-        #    for param in params.values():
-        #        min_val = param.min_val
-        #        max_val = param.max_val
-        #        steps = param.step
-        #        possible_values = np.linspace(min_val, max_val, steps + 1)
-        #        param_arrays.append(possible_values)
-        #    param_permutations = np.array(list(product(*param_arrays)))
-        #    print(len(param_permutations))
+        x_func = sp.lambdify(x_symbols, x_expr, modules=["numpy", "scipy"])
+        y_func = sp.lambdify(y_symbols, y_expr, modules=["numpy", "scipy"])
 
+        x_transform_lines = []
+        y_transform_lines = []
+        grid_plot = self.plotWidget
 
+        for line in x_lines:
+            line = np.repeat(line, num_points)
+            y = x_func(line, y_space, **x_vals)
+            x = y_func(line, y_space, **y_vals)
+            x_transform = grid_plot.plot(x, y, pen=pg.mkPen(color, width=width))
+            x_transform.setAlpha(alpha, False)
+            x_transform_lines.append(x_transform)
 
-        # Set initial value
-
-        x_transform, y_transform = sp.lambdify(symbols, expr, modules=["numpy", "scipy"])(X, Y, *param_evals.values())
-        grid_lines = []
+        for line in y_lines:
+            line = np.repeat(line, num_points)
+            y = x_func(x_space, line, **x_vals)
+            x = y_func(x_space, line, **y_vals)
+            y_transform = grid_plot.plot(x, y, pen=pg.mkPen(color, width=width))
+            y_transform.setAlpha(alpha, False)
+            y_transform_lines.append(y_transform)
 
         # Add to object parameter connections
         parameter_connections = {}
         for k, v in params.items():
             parameter_connections[k] = [v.name]
 
-        # Plot lines
+        grid = Grid(x_lines, y_lines, x_transform_lines, y_transform_lines, x_vals, y_vals, grid_plot, params,
+                    parameter_connections, x_func, y_func, x_expr, y_expr, x_symbols, y_symbols, x_space, y_space,
+                    x_range, y_range, num_lines, num_points, color, width, alpha)
 
-        grid_plot = self.plotWidget
-
-        for i in range(x_transform.shape[0]):
-            line = grid_plot.plot(x_transform[i, :], y_transform[i, :], pen=pg.mkPen(color))
-            grid_lines.append(line)
-
-        for j in range(y_transform.shape[1]):
-            line = grid_plot.plot(x_transform[:, j], y_transform[:, j], pen=pg.mkPen(color))
-            grid_lines.append(line)
-
-        grid = Grid(X, Y, grid_lines, params, param_evals, transform_func, symbols, expr, parameter_connections, grid_plot, x_range, y_range, num_points, color, width)
-
-        # Add to Graph parameter connections
-        for param in params.values():
-            self.parameter_connections[param.name].append(grid)
+        for param in dict(y_vals, **x_vals):
+            param_name = params[param].name
+            self.parameter_connections[param_name].append(grid)
 
         self.objects.append(grid)
+        self.plot_objects.append(grid)
 
         return grid
 

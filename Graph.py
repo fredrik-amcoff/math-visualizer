@@ -409,6 +409,7 @@ class Function():
             self.params = {k: str(v)}
         self.param_connections = param_connections
         self.y_values = y_values
+        self.param_values = self.y_values
         self.x_values = x_values
         self.t_space = t_space
         self.t_range = t_range
@@ -433,12 +434,12 @@ class Function():
         if self.type == "x_cartesian":
             t_space = np.linspace(max(self.t_range[0], y_range[0]), min(self.t_range[1], y_range[1]), self.num_points)
             x = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_space, **self.x_values)
-            y = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_space, **self.y_values)
+            y = t_space
             self.curve.setData(x, y)
             return
         elif self.type == "y_cartesian":
             t_space = np.linspace(max(self.t_range[0], x_range[0]), min(self.t_range[1], x_range[1]), self.num_points)
-            x = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_space, **self.x_values)
+            x = t_space
             y = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_space, **self.y_values)
             self.curve.setData(x, y)
             return
@@ -453,7 +454,7 @@ class Function():
                     (x >= x_range[0]) & (x <= x_range[1]) &
                     (y >= y_range[0]) & (y <= y_range[1])
             )
-            visible_part = np.mean(visible_mask)  # percentage of parametric curve inside of the viewing window
+            visible_part = np.mean(visible_mask)  # percentage of parametric curve inside the viewing window
 
             if not np.any(visible_mask):
                 # Nothing visible

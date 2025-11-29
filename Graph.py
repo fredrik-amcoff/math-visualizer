@@ -537,48 +537,73 @@ class Vector:
 
 
 class Grid():
-    def __init__(self, x, y, lines, params, param_values, transform_func, symbols, expr, param_connections, grid_plot, x_range, y_range, num_points, color, width):
-        self.x = x
-        self.y = y
-        self.lines = lines
-        for k, v in params.items():
-            self.params = {k: str(v)}
-        self.param_values = param_values
-        self.transform_func = transform_func
-        self.symbols = symbols
-        self.expr = expr
-        self.param_connections = param_connections
+    def __init__(self, x_lines, y_lines, x_transformed, y_transformed, x_vals, y_vals, grid_plot, params,
+                 param_connections, x_func, y_func, x_expr, y_expr, x_symbols, y_symbols, x_space, y_space, x_range,
+                 y_range, num_lines, num_points, color, width, alpha):
+        self.x_lines = x_lines
+        self.y_lines = y_lines
+        self.x_transformed = x_transformed
+        self.y_transformed = y_transformed
+        self.x_vals = x_vals
+        self.y_vals = y_vals
+        self.param_values = dict(y_vals, **x_vals)
         self.grid_plot = grid_plot
+        self.params = params
+        self.x_func = x_func
+        self.y_func = y_func
+        self.x_expr = x_expr
+        self.y_expr = y_expr
+        self.x_symbols = x_symbols
+        self.y_symbols = y_symbols
+        self.x_space = x_space
+        self.y_space = y_space
+        self.param_connections = param_connections
         self.x_range = x_range
         self.y_range = y_range
+        self.num_lines = num_lines
         self.num_points = num_points
         self.color = color
         self.width = width
+        self.alpha = alpha
 
-    def update_values(self, **kwargs):
-        for line in self.lines:
+    def update_values(self, x_range, y_range, **kwargs):
+        for line in self.x_transformed:
             self.grid_plot.removeItem(line)
-        self.lines = []
+        for line in self.y_transformed:
+            self.grid_plot.removeItem(line)
 
         for key, value in kwargs.items():
-            self.param_values[key] = value
-        x_transform, y_transform = sp.lambdify(self.symbols, self.expr, modules=["numpy", "scipy"])(self.x, self.y, *self.param_values.values())
-        #x_transform, y_transform = self.transform_func(self.x, self.y, *self.param_values.values())
-        for i in range(x_transform.shape[0]):
-            line = self.grid_plot.plot(x_transform[i, :], y_transform[i, :], pen=pg.mkPen(self.color))
-            self.lines.append(line)
+            if key in self.x_vals:
+                self.x_vals[key] = value
+            if key in self.y_vals:
+                self.y_vals[key] = value
 
-        for j in range(y_transform.shape[1]):
-            line = self.grid_plot.plot(x_transform[:, j], y_transform[:, j], pen=pg.mkPen(self.color))
-            self.lines.append(line)
+        for line in self.x_lines:
+            line = np.repeat(line, self.num_points)
+            y = self.x_func(line, self.y_space, **self.x_vals)
+            x = self.y_func(line, self.y_space, **self.y_vals)
+            x_transform = self.grid_plot.plot(x, y, pen=pg.mkPen(self.color, width=self.width))
+            x_transform.setAlpha(self.alpha, False)
+            self.x_transformed.append(x_transform)
+
+        for line in self.y_lines:
+            line = np.repeat(line, self.num_points)
+            y = self.x_func(self.x_space, line, **self.x_vals)
+            x = self.y_func(self.x_space, line, **self.y_vals)
+            y_transform = self.grid_plot.plot(x, y, pen=pg.mkPen(self.color, width=self.width))
+            y_transform.setAlpha(self.alpha, False)
+            self.y_transformed.append(y_transform)
+
 
     def save_data(self):
         return ("grid", {
                 "x_range": self.x_range,
                 "y_range": self.y_range,
-                "num_points": self.num_points,
-                "transform_func": self.transform_func,
+                "num_lines": self.num_lines,
+                "x_func": self.x_func,
+                "y_func": self.y_func,
                 "params": self.params,
+                "num_points": self.num_points,
                 "color": self.color,
                 "width": self.width})
 

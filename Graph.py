@@ -459,6 +459,7 @@ class Function():
             if not np.any(visible_mask):
                 # Nothing visible
                 self.curve.setData([], [])
+                return
             visible_indices = np.where(visible_mask)[0]
             groups = np.split(visible_indices, np.where(np.diff(visible_indices) > 1)[0] + 1)
             x_segments, y_segments = [], []

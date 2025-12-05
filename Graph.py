@@ -26,6 +26,121 @@ from itertools import product
 import random
 
 
+class GraphWindow(QtWidgets.QWidget):
+    def __init__(self, rows=1, cols=1):
+        super().__init__()
+        self.setWindowTitle("Graph Plot")
+
+        self.layout = QtWidgets.QGridLayout()
+        self.setLayout(self.layout)
+
+        #self.plotWidget = pg.PlotWidget()
+        #layout.addWidget(self.plotWidget)
+        self.rows = rows
+        self.cols = cols
+        self.total_cells = rows * cols
+
+        self.plots = []  # contains actual PlotItem objects
+        self.graph_objects = []  # stores your Graph instances
+
+        # Slider panel
+        self.slider_window = SliderWindow()
+        self.slider_window.show()
+        self.slider_panel = self.slider_window.layout
+
+        # Expression window
+        self.expression_window = ExpressionWindow()
+        self.expression_window.show()
+        self.expression_panel = self.expression_window.layout
+        self.hbox = None
+
+        # Store where graphs go
+        self.cells = [[None for _ in range(cols)] for _ in range(rows)]
+        self.graph_objects = []
+
+        self.obj_graph_connections = {}
+        self.parameters = {}
+        self.parameter_connections = {}
+        self.single_values = {}
+
+        self.current_index = 0  # next free cell
+
+    def add_graph(self, graph_obj):
+        if self.current_index >= self.rows * self.cols:
+            raise ValueError("GraphWindow is full.")
+
+        row = self.current_index // self.cols
+        col = self.current_index % self.cols
+
+        # Plot widget
+        plot_widget = pg.PlotWidget()
+        self.layout.addWidget(plot_widget, row, col)
+
+        # create the plot item for this cell
+        #plot_item = self.addPlot(row=row, col=col)
+
+        # assign the PlotItem to the graph
+        graph_obj.set_plot_item(plot_widget)
+        graph_obj.parent = self
+
+        self.plots.append(graph_obj)
+        self.current_index += 1
+
+    def add_parameter(self, name, min_val, max_val, init_val, steps=None):
+        if name in self.parameters:
+            raise NameError("Parameter {} already exists".format(name))
+        if steps is None:
+            steps = (max_val - min_val)*10
+        step_size = (max_val - min_val)/steps
+
+        layout = self.slider_window.main_layout
+
+        container = QtWidgets.QWidget()
+        hbox = QtWidgets.QHBoxLayout(container)
+
+        label = QtWidgets.QLabel(f"{name}: {init_val}")
+        label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        label.setFixedWidth(45)
+        slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        slider.setRange(int(min_val / step_size), int(max_val / step_size))
+        slider.setValue(int(init_val / step_size))
+        slider.setSingleStep(1)
+
+        hbox.addWidget(label)
+        hbox.addWidget(slider)
+        layout.addWidget(container)
+
+        param = Parameter(name, label, slider, min_val, max_val, init_val, steps)
+        slider.valueChanged.connect(lambda _: self._update_param(param))
+        self.parameters[name] = param
+        self.parameter_connections[name] = []
+        self.single_values[name] = ('parameter', init_val)
+        return param
+
+    def _update_param(self, param):
+        step_size = (param.max_val - param.min_val) / param.step
+        decimals = max(0, math.ceil(-np.log10(step_size)) if step_size < 1 else 0)
+        param.value = round(param.slider.value() * step_size, decimals)
+        param.label.setText(f"{param.name}: {param.value}")
+        self.single_values[param.name] = ("parameter", param.value)
+        param.update_values(param.value)
+        for obj in self.parameter_connections[param.name]:
+            graph = self.obj_graph_connections[obj]  # The graph the object is in
+            if isinstance(obj, Expression):
+                updated_value = obj.update_values(self.parameters)
+                obj._label.setText(f"{obj.name} = {obj.name}: {updated_value}")
+                self.expression_window.update_values(obj)
+            else:
+                param_updates = {}
+                for key, value in obj.param_connections.items():
+                    if param.name in value:
+                        param_updates[key] = param.value
+                obj.update_values(graph.x_view_range, graph.y_view_range, **param_updates)
+            # print(param_updates)
+        # print(self.points[0].x, self.points[0].y)
+
+
+
 class SliderWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -611,50 +726,55 @@ class Grid():
 class Graph(QtWidgets.QWidget):
     def __init__(self, xmin=-10, xmax=10, ymin=-10, ymax=10, bg_color="w", left_color="k", bottom_color="k", axis_color="k", axis_width=2):
         super().__init__()
-        self.setWindowTitle("Graph Plot")
-
-        layout = QtWidgets.QVBoxLayout(self)
+        self.name = name
+        self.parent = None  # GraphWindow object, gets added when Graph is added to GraphWindow
 
         # Plot widget
-        self.plotWidget = pg.PlotWidget()
-        layout.addWidget(self.plotWidget)
+        self.plotWidget = None
 
-        # Slider panel
-        self.slider_window = SliderWindow()
-        self.slider_window.show()
-        self.slider_panel = self.slider_window.layout
-
-        # Expression window
-        self.expression_window = ExpressionWindow()
-        self.expression_window.show()
-        self.expression_panel = self.expression_window.layout
-        self.hbox = None
-
-        # Configure plot
-        self.plotWidget.setBackground(bg_color)
-        self.plotWidget.showGrid(x=True, y=True, alpha=0.3)
-        self.plotWidget.setMouseEnabled(x=True, y=True)
-        self.plotWidget.setRange(xRange=[xmin, xmax], yRange=[ymin, ymax])
-        self.plotWidget.getAxis("left").setPen(left_color)
-        self.plotWidget.getAxis("bottom").setPen(bottom_color)
-        self.plotWidget.setAspectLocked(False)
-        self.x_view_range = (xmin, xmax)
-        self.y_view_range = (ymin, ymax)
-        self.plotWidget.getViewBox().sigRangeChanged.connect(self._update_range)
-
-        # Main axes
-        axis_pen = pg.mkPen(axis_color, width=axis_width)
-        self.plotWidget.addItem(pg.InfiniteLine(angle=0, pen=axis_pen))  # X-axis
-        self.plotWidget.addItem(pg.InfiniteLine(angle=90, pen=axis_pen))  # Y-axis
+        # Basic config
+        self.xmin = xmin
+        self.xmax = xmax
+        self.ymin = ymin
+        self.ymax = ymax
+        self.bg_color = bg_color
+        self.left_color = left_color
+        self.bottom_color = bottom_color
+        self.x_axis = x_axis
+        self.y_axis = y_axis
+        self.axis_color = axis_color
+        self.axis_width = axis_width
+        self.x_view_range = (self.xmin, self.xmax)
+        self.y_view_range = (self.ymin, self.ymax)
 
         # References
         self.parameters = {}
-        self.single_values = {}
         self.parameter_connections = {}
         self.expressions = {}
         self.functions = []
         self.points = []
         self.objects = []
+        self.plot_objects = []
+
+    def set_plot_item(self, plot_widget):
+        """Assign a PlotItem. Must be called once the Graph is added to a GraphWindow."""
+        # Configure plot
+        self.plotWidget = plot_widget
+        self.plotWidget.setBackground(self.bg_color)
+        self.plotWidget.showGrid(x=self.x_axis, y=self.y_axis, alpha=0.3)
+        self.plotWidget.setMouseEnabled(x=self.x_axis, y=self.y_axis)
+        self.plotWidget.setRange(xRange=[self.xmin, self.xmax], yRange=[self.ymin, self.ymax])
+        self.plotWidget.getAxis("left").setPen(self.left_color)
+        self.plotWidget.getAxis("bottom").setPen(self.bottom_color)
+        self.plotWidget.setAspectLocked(False)
+        self.plotWidget.getViewBox().sigRangeChanged.connect(self._update_range)
+
+        # Main axes
+        axis_pen = pg.mkPen(self.axis_color, width=self.axis_width)
+        if self.x_axis:
+            self.plotWidget.addItem(pg.InfiniteLine(angle=0, pen=axis_pen))  # X-axis
+        if self.y_axis:
+            self.plotWidget.addItem(pg.InfiniteLine(angle=90, pen=axis_pen))  # Y-axis
 
     def _get_param_values(self, params):
         """Helper function for getting parameter values from list of parameters"""
@@ -818,13 +938,15 @@ class Graph(QtWidgets.QWidget):
         point = Point(X, Y, param_connections=parameter_connections, scatter=scatter, func=func,
                       color=color, size=size)
         for param in set(params):
-            self.parameter_connections[str(param)].append(point)
+            self.parent.parameter_connections[str(param)].append(point)
         self.points.append(point)
         self.objects.append(point)
+        self.plot_objects.append(point)
+        self.parent.obj_graph_connections[point] = self
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-    def add_function(self, y_func, x_func=None, params=None, t_range=(-100, 100), num_points=100, initial_parametric_resolution=int(10e5), color="b", width=2):
+    def add_function(self, y_func, x_func=None, params=None, t_range=(-100, 100), num_points=1000, initial_parametric_resolution=int(10e5), main_variables=1, color="b", width=2):
         """
         Default is normal function. By adding a x_func, it is also possible to create a parametric function.
         Main variable should be the first one in both y_func and x_func.
@@ -855,8 +977,8 @@ class Graph(QtWidgets.QWidget):
         y_symbols = sp.symbols(list(y_vars.parameters))
         x_symbols = sp.symbols(list(x_vars.parameters))
 
-        y_vals, y_params = self._get_single_values(y_vars.parameters, params, skip_first=1)
-        x_vals, x_params = self._get_single_values(x_vars.parameters, params, skip_first=1)
+        y_vals, y_params = self._get_single_values(y_vars.parameters, params, skip_first=main_variables)
+        x_vals, x_params = self._get_single_values(x_vars.parameters, params, skip_first=main_variables)
 
         y_expr = y_func(*y_symbols)
         x_expr = x_func(*x_symbols)
@@ -885,11 +1007,13 @@ class Graph(QtWidgets.QWidget):
 
         for param in dict(y_vals, **x_vals):
             param_name = params[param].name
-            self.parameter_connections[param_name].append(function)
+            self.parent.parameter_connections[param_name].append(function)
 
         curve.setData(x, y)
         self.objects.append(function)
         self.functions.append(function)
+        self.plot_objects.append(function)
+        self.parent.obj_graph_connections[function] = self
         return function
 
     def add_grid(self, x_range=(-10, 10), y_range=(-10, 10), num_lines=21, x_func=lambda x, y: x, y_func=lambda x, y: y, params=None, num_points=1000, color="grey", width=2, alpha=0.9):
@@ -950,10 +1074,11 @@ class Graph(QtWidgets.QWidget):
 
         for param in dict(y_vals, **x_vals):
             param_name = params[param].name
-            self.parameter_connections[param_name].append(grid)
+            self.parent.parameter_connections[param_name].append(grid)
 
         self.objects.append(grid)
         self.plot_objects.append(grid)
+        self.parent.obj_graph_connections[grid] = self
 
         return grid
 

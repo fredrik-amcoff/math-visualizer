@@ -778,7 +778,7 @@ class Graph(QtWidgets.QWidget):
 
     def _get_param_values(self, params):
         """Helper function for getting parameter values from list of parameters"""
-        return {key: value[1] for key, value in self.single_values.items() if key in params}
+        return {key: value[1] for key, value in self.parent.single_values.items() if key in params}
 
     def _update_range(self):
         vb = self.plotWidget.getViewBox()
@@ -786,10 +786,10 @@ class Graph(QtWidgets.QWidget):
         self.x_view_range = x_range
         self.y_view_range = y_range
 
-        for func in self.functions:
-            param_values = func.y_values
+        for obj in self.plot_objects:
+            param_values = obj.param_values
             #x_range = (np.max(x_range[0], func.x_range[0]), np.max(x_range[1], func.x_range[1]))
-            func.update_values(x_range, y_range, **param_values)
+            obj.update_values(x_range, y_range, **param_values)
 
     def save_config(self, filename, filepath="saves"):
         data = []
@@ -813,7 +813,6 @@ class Graph(QtWidgets.QWidget):
             loaded_data = dill.load(f)
         for obj in loaded_data:
             type, kwargs = obj
-            print(type, kwargs)
             object_operations_map[type](**kwargs)
 
     def add_parameter(self, name, min_val, max_val, init_val, steps=None):
@@ -841,36 +840,8 @@ class Graph(QtWidgets.QWidget):
         param = Parameter(name, label, slider, min_val, max_val, init_val, steps)
         slider.valueChanged.connect(lambda _: self._update_param(param))
         self.parameters[name] = param
-        self.single_values[name] = ('parameter', init_val)
         self.parameter_connections[name] = []
-        self.objects.append(param)
         return param
-
-    def _update_param(self, param):
-        step_size = (param.max_val - param.min_val) / param.step
-        decimals = max(0, math.ceil(-np.log10(step_size)) if step_size < 1 else 0)
-        param.value = round(param.slider.value() * step_size, decimals)
-        param.label.setText(f"{param.name}: {param.value}")
-        self.single_values[param.name] = ("parameter", param.value)
-        param.update_values(param.value)
-        for obj in self.parameter_connections[param.name]:
-            if isinstance(obj, Expression):
-                updated_value = obj.update_values(self.parameters)
-                obj._label.setText(f"{obj.name} = {obj.name}: {updated_value}")
-                self.expression_window.update_values(obj)
-            else:
-                param_updates = {}
-                for key, value in obj.param_connections.items():
-                    if param.name in value:
-                        param_updates[key] = param.value
-                obj.update_values(self.x_view_range, self.y_view_range, **param_updates)
-            #print(param_updates)
-        #print(self.points[0].x, self.points[0].y)
-
-
-
-
-        # ADD REDRAW
 
     def _format_param_dict(self, dict):
         """Helper function to reformat parameter dictionaries where the parameters are entered as strings"""
@@ -886,11 +857,11 @@ class Graph(QtWidgets.QWidget):
             try:
                 pvals[key] = params[key].value
                 pdict[key] = params[key]
-            except KeyError:
-                if key in self.single_values:
-                    type, value = self.single_values[key]
+            except KeyError:  # If param not specified
+                if key in self.parent.single_values:
+                    type, value = self.parent.single_values[key]
                     pvals[key] = value
-                    pdict[key] = self.parameters[key]
+                    pdict[key] = self.parent.parameters[key]
                     warnings.warn(f"Variable {key} not specified, assumes added {type} {key}.")
                 else:
                     raise KeyError(f"Variable {key} not defined.")
@@ -907,7 +878,7 @@ class Graph(QtWidgets.QWidget):
 
         self.expressions[expression_name] = expression
         self.objects.append(expression)
-        self.single_values[expression_name] = ("expression" ,expression_evaluation)
+        self.parent.single_values[expression_name] = ("expression" ,expression_evaluation)
         self.expression_window.params = self.parameters
 
         self.expression_window.add_expression(expression)
@@ -924,7 +895,7 @@ class Graph(QtWidgets.QWidget):
                 warnings.warn("Points defined from expressions are not supported. The initial value will be correct "
                               "\nbut any updates to the expression through the parameters will be incorrect. Instead, "
                               "\nenter pure parameters as inputs and define the transformation in the func argument.")
-        param_values = {p.expr: p.value for p in self.parameters.values()}
+        param_values = {p.expr: p.value for p in self.parent.parameters.values()}
         scatter = pg.ScatterPlotItem(size=size, brush=pg.mkBrush(color))
         self.plotWidget.addItem(scatter)
         X = X.expr if type(X) in (Parameter, Expression) else X
@@ -990,19 +961,19 @@ class Graph(QtWidgets.QWidget):
         for k, v in x_params.items():
             parameter_connections[k] = [v.name]
 
-        x = sp.lambdify(x_symbols, x_expr, modules=["numpy", "scipy"])(t, **x_vals)
-        y = sp.lambdify(y_symbols, y_expr, modules=["numpy", "scipy"])(t, **y_vals)
+        x = sp.lambdify(x_symbols, x_expr, modules=["numpy", "scipy"])(t, **x_vals) * np.ones_like(t, dtype=float)
+        y = sp.lambdify(y_symbols, y_expr, modules=["numpy", "scipy"])(t, **y_vals) * np.ones_like(t, dtype=float)
 
         if np.array_equal(y, t):
-            type = "x_cartesian"  # x = f(y)
+            func_type = "x_cartesian"  # x = f(y)
         elif np.array_equal(x, t):
-            type = "y_cartesian"  # y = f(x)
+            func_type = "y_cartesian"  # y = f(x)
         else:
-            type = "parametric"  # x = f(t), y = g(t)
+            func_type = "parametric"  # x = f(t), y = g(t)
 
 
         function = Function(x_func, y_func, params, parameter_connections, y_vals, x_vals, t, t_range, num_points,
-                            color, width, curve, y_expr, x_expr, y_symbols, x_symbols, type,
+                            color, width, curve, y_expr, x_expr, y_symbols, x_symbols, func_type,
                             initial_parametric_resolution)
 
         for param in dict(y_vals, **x_vals):

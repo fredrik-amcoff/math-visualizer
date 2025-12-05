@@ -506,8 +506,6 @@ class Point():
         x_transform, y_transform = self.func(self.x, self.y)
         self.x_transform = x_transform
         self.y_transform = y_transform
-        print(x_transform, y_transform)
-        print(self.x, self.y)
         self.scatter.setData([x_transform], [y_transform])
 
     def save_data(self):
@@ -692,6 +690,7 @@ class Grid():
                 self.x_vals[key] = value
             if key in self.y_vals:
                 self.y_vals[key] = value
+            self.param_values[key] = value
 
         for line in self.x_lines:
             line = np.repeat(line, self.num_points)
@@ -724,7 +723,7 @@ class Grid():
 
 
 class Graph(QtWidgets.QWidget):
-    def __init__(self, xmin=-10, xmax=10, ymin=-10, ymax=10, bg_color="w", left_color="k", bottom_color="k", axis_color="k", axis_width=2):
+    def __init__(self, name=None, xmin=-10, xmax=10, ymin=-10, ymax=10, bg_color="w", left_color="k", bottom_color="k", x_axis=True, y_axis=True, axis_color="k", axis_width=2):
         super().__init__()
         self.name = name
         self.parent = None  # GraphWindow object, gets added when Graph is added to GraphWindow
@@ -828,6 +827,8 @@ class Graph(QtWidgets.QWidget):
         hbox = QtWidgets.QHBoxLayout(container)
 
         label = QtWidgets.QLabel(f"{name}: {init_val}")
+        label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        label.setFixedWidth(45)
         slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         slider.setRange(int(min_val / step_size), int(max_val / step_size))
         slider.setValue(int(init_val / step_size))

@@ -1255,6 +1255,8 @@ class Graph(QtWidgets.QWidget):
 
         params = self._format_param_dict(params)
         curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
+        scatter = pg.ScatterPlotItem(size=point_size, brush=pg.mkBrush(color))
+        self.plotWidget.addItem(scatter)
         curve.setClipToView(True)
         t = np.linspace(t_range[0], t_range[1], num_points)
         parameter_connections = {}

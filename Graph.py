@@ -1162,6 +1162,7 @@ class Graph(QtWidgets.QWidget):
         pvals = {}
         pdict = {}
         for key in list(var_list)[skip_first:]:
+            key = str(key)  # Key could be sp symbol, in that case convert to str.
             try:
                 pvals[key] = params[key].value
                 pdict[key] = params[key]

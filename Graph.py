@@ -573,23 +573,73 @@ class Function():
             if key in self.y_values:
                 self.y_values[key] = value
 
+        # nsimplify turns floats into rational numbers, might change later
+        self.y_num = self.y_expr.subs(self.y_values)
+        self.x_num = self.x_expr.subs(self.x_values)
+        try:
+            y_inherent_domain = continuous_domain(self.y_num, self.y_symbols[0], S.Reals)
+        except NotImplementedError:
+            y_inherent_domain = sp.Interval(-oo, oo)
+        try:
+            x_inherent_domain = continuous_domain(self.x_num, self.x_symbols[0], S.Reals)
+        except NotImplementedError:
+            x_inherent_domain = sp.Interval(-oo, oo)
+
+        base_intervals, base_points = decompose_numeric_set(self.base_domain)
+        window_interval = sp.Interval(x_range[0], x_range[1])
+
+        intervals, points = decompose_numeric_set(self.domain.numerical_set)
+
+        mask_func = make_mask(intervals)  # Function for masking intervals
+
+        self.base_domain = self.domain.expr.subs(self.domain.param_values)
+
+        self.curve.setDownsampling(auto=False)
+        self.curve.setClipToView(False)
+        sliced_points = fast_intersection(y_inherent_domain, x_inherent_domain, window_interval, base_intervals, points)
+
         if self.type == "x_cartesian":
-            t_space = np.linspace(max(self.t_range[0], y_range[0]), min(self.t_range[1], y_range[1]), self.num_points)
-            x = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_space, **self.x_values)
-            y = t_space
-            self.curve.setData(x, y)
+            # Visible y_interval:
+            t_space = np.linspace(y_range[0], y_range[1], self.num_points)
+            func = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])
+            mask = mask_func(t_space)
+            y = np.where(mask, t_space, np.nan)
+            x = func(y, **self.x_values)
+            x = np.where(mask, x, np.nan)
+            if len(sliced_points)>0:
+                y_points = np.array(sliced_points)
+                x_points = func(y_points, **self.x_values)
+                self.scatter.setData(x_points, y_points)
+            else:
+                self.scatter.setData([np.nan], [np.nan])
+            self.curve.setData(x.astype(float), y.astype(float))
             return
-        elif self.type == "y_cartesian":
-            t_space = np.linspace(max(self.t_range[0], x_range[0]), min(self.t_range[1], x_range[1]), self.num_points)
-            x = t_space
-            y = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_space, **self.y_values)
-            self.curve.setData(x, y)
+
+        if self.type == "y_cartesian":
+            # Visible x-interval:
+            t_space = np.linspace(x_range[0], x_range[1], self.num_points)
+            #mask = self.domain.make_numpy_mask(self.domain.numerical_set)
+            func = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])
+            mask = mask_func(t_space)
+            x = np.where(mask, t_space, np.nan)
+            y = func(x, **self.y_values)
+            if len(sliced_points) > 0:
+                x_points = np.array(sliced_points).astype(float)
+                y_points = func(x_points, **self.y_values)
+                self.scatter.setData(x_points, y_points)
+            else:
+                self.scatter.setData([np.nan], [np.nan])
+
+            self.curve.setData(x.astype(float), y.astype(float))  # Change to float before plotting
             return
         else:
             t_space = np.linspace(self.t_range[0], self.t_range[1], self.initial_parametric_resolution)
+            mask = mask_func(t_space)
 
         x = sp.lambdify(self.x_symbols, self.x_expr, modules=["numpy", "scipy"])(t_space, **self.x_values)
+        x = np.where(mask, x, np.nan)
         y = sp.lambdify(self.y_symbols, self.y_expr, modules=["numpy", "scipy"])(t_space, **self.y_values)
+        y = np.where(mask, y, np.nan)
 
         if self.type == "parametric":
             visible_mask = (
@@ -637,7 +687,7 @@ class Function():
                 x = np.concatenate(x_parts)
                 y = np.concatenate(y_parts)
 
-                self.curve.setData(x, y)
+                self.curve.setData(x.astype(float), y.astype(float))
 
 
 

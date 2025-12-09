@@ -731,7 +731,7 @@ class Vector:
 class Grid():
     def __init__(self, x_lines, y_lines, x_transformed, y_transformed, x_vals, y_vals, grid_plot, params,
                  param_connections, x_func, y_func, x_expr, y_expr, x_symbols, y_symbols, x_space, y_space, x_range,
-                 y_range, num_lines, num_points, color, width, alpha):
+                 y_range, num_lines, num_points, color, width, alpha, plot=True):
         self.x_lines = x_lines
         self.y_lines = y_lines
         self.x_transformed = x_transformed
@@ -757,8 +757,11 @@ class Grid():
         self.color = color
         self.width = width
         self.alpha = alpha
+        self.plot = plot
 
     def update_values(self, x_range, y_range, **kwargs):
+        if not self.plot:
+            return
         for line in self.x_transformed:
             self.grid_plot.removeItem(line)
         for line in self.y_transformed:

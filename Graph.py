@@ -1425,6 +1425,96 @@ class Graph(QtWidgets.QWidget):
 
         #self.plotWidget.addItem(arrow)
 
+    def add_set(self, sp_set, params=None, plot=True, color="b", width=2):
+        if params is None:
+            params = {}
+
+        params = self._format_param_dict(params)
+
+        symbols = sp_set.free_symbols
+
+        param_vals, params = self._get_single_values(symbols, params)
+
+        parameter_connections = {}
+        for k, v in params.items():
+            parameter_connections[k] = [v.name]
+
+        set_obj = NumSet(sp_set, params, param_vals, parameter_connections, plot)
+
+        for param in set(params):
+            self.parent.parameter_connections[param].append(set_obj)
+
+        self.parent.obj_graph_connections[set_obj] = self
+
+        return set_obj
+
+
+    def add_level_curve(self, surface_function, level, params=None, color="b", width=2):
+        if params is None:
+            params = {}
+
+        curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
+
+        t = sp.symbols("t")
+        x = sp.symbols("x")
+        y = sp.symbols("y")
+        symbols = sp.symbols(["x", "y"])
+
+        F = surface_function(*symbols)
+
+        initial_point_found = False
+        # Try simple symbolic guesses for x
+        for x0_guess in [0, 1, -1, 0.5, -0.5]:
+            try:
+                # Solve for y given x0_guess
+                y_solutions = sp.solve(F.subs(x, x0_guess) - level, y)
+                y_solutions = [sol.evalf() for sol in y_solutions if sol.is_real]
+                if y_solutions:
+                    x0_val = float(x0_guess)
+                    y0_val = float(y_solutions[0])
+                    initial_point_found = True
+                    break
+            except:
+                continue
+
+        if not initial_point_found:
+            # Fallback: try numeric root-finding for y with a fixed x
+            from scipy.optimize import fsolve
+            def F_func(y_val):
+                return float(F.subs({x: 0.5, y: y_val}) - level)
+
+            y0_val = fsolve(F_func, 0.0)[0]
+            x0_val = 0.5
+            initial_point_found = True
+
+        print(f"Initial point chosen: x0 = {x0_val}, y0 = {y0_val}")
+
+        Fx = sp.diff(F, x)  # Derivative of F w.r.t. x
+        Fy = sp.diff(F, y)  # Derivative of F w.r.t. y
+
+        # Numerical integration
+        # Convert gradient to lambda functions
+        Fx_func = sp.lambdify((x, y), Fx.subs({x: x0_val, y: y0_val}) * 0 + Fx, 'numpy')
+        Fy_func = sp.lambdify((x, y), Fy.subs({x: x0_val, y: y0_val}) * 0 + Fy, 'numpy')
+
+        def ode_system(t, z):
+            x_val, y_val = z
+            dxdt = Fy_func(x_val, y_val)
+            dydt = -Fx_func(x_val, y_val)
+            return [dxdt, dydt]
+
+        # Solve numerically
+        t_span = (0, 1)  # total "time" for tracing the curve
+        z0 = [x0_val, y0_val]
+        sol_num = solve_ivp(ode_system, t_span, z0, max_step=0.05, dense_output=True)
+
+        x_vals = sol_num.y[0]
+        y_vals = sol_num.y[1]
+
+        curve.setData(x_vals, y_vals)
+
+
+
 
 
 

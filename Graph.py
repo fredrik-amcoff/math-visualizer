@@ -89,11 +89,18 @@ class GraphWindow(QtWidgets.QWidget):
         self.plots.append(graph_obj)
         self.current_index += 1
 
-    def add_parameter(self, name, min_val, max_val, init_val, steps=None):
+    def add_parameter(self, name, min_val, max_val, init_val, steps=None, numeric_domain='real'):
         if name in self.parameters:
             raise NameError("Parameter {} already exists".format(name))
         if steps is None:
             steps = (max_val - min_val)*10
+        if numeric_domain == 'integer':
+            init_val = int(init_val)
+        if numeric_domain == 'rational':  # WORK IN PROGRESS
+            init_val = nsimplify(init_val)
+        if numeric_domain == 'real':
+            init_val = float(init_val)
+
         step_size = (max_val - min_val)/steps
 
         layout = self.slider_window.main_layout
@@ -113,7 +120,7 @@ class GraphWindow(QtWidgets.QWidget):
         hbox.addWidget(slider)
         layout.addWidget(container)
 
-        param = Parameter(name, label, slider, min_val, max_val, init_val, steps)
+        param = Parameter(name, label, slider, min_val, max_val, init_val, steps, numeric_domain)
         slider.valueChanged.connect(lambda _: self._update_param(param))
         self.parameters[name] = param
         self.parameter_connections[name] = []
@@ -124,6 +131,12 @@ class GraphWindow(QtWidgets.QWidget):
         step_size = (param.max_val - param.min_val) / param.step
         decimals = max(0, math.ceil(-np.log10(step_size)) if step_size < 1 else 0)
         param.value = round(param.slider.value() * step_size, decimals)
+        if param.numeric_domain == 'integer':
+            param.value = int(param.value)
+        elif param.numeric_domain == 'rational':
+            param.value = nsimplify(param.value)
+        elif param.numeric_domain == 'real':
+            param.value = float(param.value)
         param.label.setText(f"{param.name}: {param.value}")
         self.single_values[param.name] = ("parameter", param.value)
         param.update_values(param.value)
@@ -219,7 +232,7 @@ class ExpressionWindow(QtWidgets.QWidget):
 
 
 class Parameter():
-    def __init__(self, name, label, slider, min_val, max_val, value, step):
+    def __init__(self, name, label, slider, min_val, max_val, value, step, numeric_domain):
         self.name = name
         self.label = label
         self.slider = slider
@@ -229,6 +242,8 @@ class Parameter():
         self.step = step
         self.parameter_dependencies = {self.name: self.value}
         self.expr = sp.symbols(name)
+        self.symbol = sp.Symbol(name)
+        self.numeric_domain = numeric_domain
 
     def update_values(self, new_val):
         self.value = new_val

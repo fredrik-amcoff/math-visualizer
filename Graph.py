@@ -506,7 +506,7 @@ class Expression():
 
 
 class Point():
-    def __init__(self, x, y, param_connections, scatter, func=lambda x, y: (x, y), color="r", size=10):
+    def __init__(self, x, y, param_connections, scatter, func=lambda x, y: (x, y), color="r", size=10, plot=True):
         self.x = x
         self.y = y
         self.func = func
@@ -517,8 +517,11 @@ class Point():
         self.scatter = scatter
         self.color = color
         self.size = size
+        self.plot = plot
 
     def update_values(self, x_range, y_range, **kwargs):
+        if not self.plot:
+            return
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
@@ -551,14 +554,19 @@ class Function():
         self.color = color
         self.width = width
         self.curve = curve
+        # Symbolic expressions
         self.y_expr = y_expr
         self.x_expr = x_expr
         self.y_symbols = y_symbols
         self.x_symbols = x_symbols
         self.type = type
         self.initial_parametric_resolution = int(initial_parametric_resolution)
+        self.plot = plot
+        self.scatter = scatter
 
     def update_values(self, x_range, y_range, **kwargs):
+        if not self.plot:
+            return
         for key, value in kwargs.items():
             if key in self.x_values:
                 self.x_values[key] = value

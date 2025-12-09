@@ -1269,11 +1269,35 @@ class Graph(QtWidgets.QWidget):
 
         y_vals, y_params = self._get_single_values(y_vars.parameters, params, skip_first=main_variables)
         x_vals, x_params = self._get_single_values(x_vars.parameters, params, skip_first=main_variables)
+        domain_vals, domain_params = self._get_single_values(domain.expr.free_symbols, params, skip_first=0)
 
+        # Symbolic expressions
         y_expr = y_func(*y_symbols)
         x_expr = x_func(*x_symbols)
 
-        params = dict(y_params, **x_params)
+        # Numerical expressions
+        y_num = y_expr.subs(y_vals)
+        x_num = x_expr.subs(x_vals)
+
+        # Domain defined by user
+        base_domain = domain.numerical_set
+
+        # Domain restrictions by function (example undefined points)
+        try:
+            y_inherent_domain = continuous_domain(y_num, y_symbols[0], S.Reals)
+        except NotImplementedError:
+            y_inherent_domain = sp.Interval(-oo, oo)
+            warnings.warn("Sympy unable to calculate inherent domain, assumes +-oo instead.")
+        try:
+            x_inherent_domain = continuous_domain(x_num, x_symbols[0], S.Reals)
+        except NotImplementedError:
+            x_inherent_domain = sp.Interval(-oo, oo)
+            warnings.warn("Sympy unable to calculate inherent domain, assumes +-oo instead.")
+
+        # Remove undefined points from domain
+        domain.numerical_set = base_domain & y_inherent_domain & x_inherent_domain
+
+        params = dict(y_params, **x_params, **domain_params)  # Domain params will affect the function
 
         for k, v in y_params.items():
             parameter_connections[k] = [v.name]
@@ -1291,15 +1315,16 @@ class Graph(QtWidgets.QWidget):
             func_type = "parametric"  # x = f(t), y = g(t)
 
 
-        function = Function(x_func, y_func, params, parameter_connections, y_vals, x_vals, t, t_range, num_points,
-                            color, width, curve, y_expr, x_expr, y_symbols, x_symbols, func_type,
-                            initial_parametric_resolution)
+        function = Function(x_func, y_func, x_num, y_num, params, parameter_connections, y_vals, x_vals, domain,
+                            base_domain, t, t_range, num_points, color, width, curve, scatter, y_expr, x_expr,
+                            y_symbols, x_symbols, func_type, initial_parametric_resolution, plot)
 
-        for param in dict(y_vals, **x_vals):
+        for param in dict(y_vals, **x_vals, **domain_vals):
             param_name = params[param].name
             self.parent.parameter_connections[param_name].append(function)
 
-        curve.setData(x, y)
+        #curve.setData(x.astype(float), y.astype(float))
+        function.update_values(self.x_view_range, self.y_view_range)
         self.objects.append(function)
         self.functions.append(function)
         self.plot_objects.append(function)

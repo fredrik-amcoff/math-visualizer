@@ -372,6 +372,9 @@ class Parameter():
     def __str__(self):
         return self.name
 
+    def _sympy_(self):
+        return self.symbol
+
 
 class Expression():
     def __init__(self, name, label, value, parameter_dependencies, expr):

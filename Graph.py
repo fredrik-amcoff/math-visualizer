@@ -1247,6 +1247,11 @@ class Graph(QtWidgets.QWidget):
             params = {}
         if x_func is None:
             x_func = lambda t: t
+        if domain is None:
+            infinite_set = self.add_set(sp.Interval(-oo, oo), plot=False)  # Default domain: interval +-infinity
+            domain = infinite_set
+
+
 
         params = self._format_param_dict(params)
         curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))

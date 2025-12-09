@@ -1226,7 +1226,9 @@ class Graph(QtWidgets.QWidget):
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-    def add_function(self, y_func, x_func=None, params=None, t_range=(-100, 100), num_points=1000, initial_parametric_resolution=int(10e5), main_variables=1, color="b", width=2):
+    def add_function(self, y_func, x_func=None, params=None, domain=None, t_range=(-100, 100), num_points=1000,
+                     initial_parametric_resolution=int(10000), main_variables=1, plot=True, color="b", width=2,
+                     point_size=5):
         """
         Default is normal function. By adding a x_func, it is also possible to create a parametric function.
         Main variable should be the first one in both y_func and x_func.

@@ -1230,15 +1230,16 @@ class Graph(QtWidgets.QWidget):
                      initial_parametric_resolution=int(10000), main_variables=1, plot=True, color="b", width=2,
                      point_size=5):
         """
-        Default is normal function. By adding a x_func, it is also possible to create a parametric function.
-        Main variable should be the first one in both y_func and x_func.
-        :param y_func: Function that takes in numerical argument and returns numerical value. Main variable first.
-        :param x_func: Additional function to allow for parametric function. Main variable first.
-        :param params: Dictionary of parameters, {"a": a, "b": b,...}
-        :param t_range: Domain of the function
-        :param num_points: Graph resolution
+        Default is cartesian y-function (f(x)). By adding a x_func, it is also possible to create a parametric function.
+        :param y_func: function of x
+        :param x_func: function of y
+        :param params: dictionary of parameters
+        :param t_range: domain for cartesian functions, range of t for parametric functions
+        :param num_points: number of total rendered points at each state
+        :param initial_parametric_resolution: ?
+        :param main_variables: first n variables will be treated as main variables
         :param color: color
-        :param width: width
+        :param width: width of plot
         :return: Function object
         """
 

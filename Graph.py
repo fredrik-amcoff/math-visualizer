@@ -801,7 +801,232 @@ class Grid():
                 "params": self.params,
                 "num_points": self.num_points,
                 "color": self.color,
-                "width": self.width})
+                "width": self.width,
+                "alpha": self.alpha})
+
+
+def decompose_numeric_set(S, universal=None):
+    """
+    Recursively decompose a numeric 1D SymPy set into intervals and points,
+    handling Interval, FiniteSet, Range, Union, Intersection, and Complement.
+
+    Args:
+        S: SymPy set
+        universal: optional Interval defining bounds for complements
+
+    Returns:
+        intervals: list of Interval objects
+        points: list of numeric points
+    """
+    intervals = []
+    points = []
+
+    # Base cases
+    if S.is_empty:
+        return [], []
+
+    elif isinstance(S, sp.Interval):
+        intervals.append(S)
+        return intervals, points
+
+    elif isinstance(S, sp.FiniteSet):
+        points.extend([float(p) for p in S])
+        return intervals, points
+
+    elif isinstance(S, sp.Range):
+        points.extend(list(S))
+        return intervals, points
+
+    elif isinstance(S, sp.Union):
+        for part in S.args:
+            ivals, pts = decompose_numeric_set(part, universal)
+            intervals.extend(ivals)
+            points.extend(pts)
+        return intervals, points
+
+    elif isinstance(S, sp.Intersection):
+        # recursively intersect all arguments
+        if not S.args:
+            return [], []
+        ivals, pts = decompose_numeric_set(S.args[0], universal)
+        for part in S.args[1:]:
+            ivals2, pts2 = decompose_numeric_set(part, universal)
+            # intersect intervals
+            if ivals and ivals2:
+                new_intervals = []
+                for I1 in ivals:
+                    for I2 in ivals2:
+                        inter = I1.intersect(I2)
+                        if not inter.is_empty:
+                            new_intervals.append(inter)
+                ivals = new_intervals
+            else:
+                ivals = ivals or ivals2  # if one empty, take the other
+            # intersect points
+            pts = list(set(pts) & set(pts2))
+        return ivals, pts
+
+    elif isinstance(S, sp.Complement):
+        # Decompose complement: A - B = A ∩ (universal - B)
+        A, B = S.args
+        # define universal if not given
+        if universal is None:
+            # numeric universal can be the smallest/largest interval from A
+            # fallback: [-1e9, 1e9]
+            universal = sp.Interval(-1e9, 1e9)
+        # compute B complement relative to universal
+        B_complement = universal - B
+        return decompose_numeric_set(A & B_complement, universal)
+
+    else:
+        # fallback: treat as single numeric point
+        try:
+            points.append(float(S))
+            return intervals, points
+        except:
+            raise TypeError(f"Cannot handle set: {S}")
+
+
+def make_mask(intervals):
+
+    def mask(xs):
+        # vectorized boolean array
+        m = np.zeros(xs.shape, dtype=bool)
+
+        # apply interval masks
+        for I in intervals:
+            if I.left_open:
+                left_cond = xs > float(I.start)
+            else:
+                left_cond = xs >= float(I.start)
+
+            if I.right_open:
+                right_cond = xs < float(I.end)
+            else:
+                right_cond = xs <= float(I.end)
+
+            m |= (left_cond & right_cond)
+
+        return m
+
+    return mask
+
+
+def fast_intersection(y_inherent_domain, x_inherent_domain, window_interval, base_intervals, points):
+    # (A ∩ B) \ C = all points in inherent domains and window interval minus all points in the base intervals
+    if not base_intervals:
+        base_intervals = [sp.EmptySet]
+    interval_intersection = (sp.Intersection(y_inherent_domain, x_inherent_domain, window_interval) -
+                             sp.Intersection(*base_intervals))
+    # Normalize to a list of intervals or empty
+    #print(sp.Intersection(y_inherent_domain, x_inherent_domain, window_interval))
+    if interval_intersection.is_empty:
+        parts = []
+    elif isinstance(interval_intersection, sp.Interval):
+        parts = [interval_intersection]
+    elif isinstance(interval_intersection, sp.Union):
+        parts = list(interval_intersection.args)
+    else:
+        parts = [interval_intersection]
+
+    points.sort()  # sort points
+
+    sliced_points = []
+    print(parts)
+    for interval in parts:
+        start, end = interval.start, interval.end
+        # find left index
+        if interval.left_open:
+            left = bisect.bisect_right(points, start)
+        else:
+            left = bisect.bisect_left(points, start)
+
+        # find right index
+        if interval.right_open:
+            right = bisect.bisect_left(points, end)
+        else:
+            right = bisect.bisect_right(points, end)
+
+        # select the points inside current interval
+        sliced_points.extend(points[left:right])
+    return sliced_points
+
+
+    #for part in interval_intersection:
+    #    print(f"Part {part} {type(part)}")
+
+
+class NumSet:
+    def __init__(self, sp_set, params, param_values, parameter_connections, plot):
+        self.expr = sp_set  # Symbolic expression (sp.Set)
+        self.numerical_set = sp_set.subs(param_values)  # Numerical expression (sp.Set)
+        self.params = params
+        self.param_values = param_values
+        self.param_connections = parameter_connections
+        self.plot = plot
+
+    def update_values(self, x_range, y_range, **kwargs):
+        if not self.plot:
+            return
+        for key, value in kwargs.items():
+            self.param_values[key] = value
+
+        self.numerical_set = self.expr.subs(self.param_values)
+
+
+class GenericSampler:
+    def __init__(self, var, pdf, domain):
+        """
+        var     = SymPy symbol (x)
+        pdf     = SymPy expression for pdf(x) or pmf(x)
+        domain  = Interval(a, b) for continuous, or FiniteSet for discrete
+        """
+        self.var = var
+        self.pdf = pdf
+        self.domain = domain
+
+        # Convert pdf to numerical function
+        self.f = sp.lambdify(var, pdf, 'math')
+
+        # Detect discrete or continuous
+        self.is_discrete = isinstance(domain, sp.FiniteSet)
+
+        if self.is_discrete:
+            # Precompute discrete probabilities
+            points = list(domain)
+            probs = [float(pdf.subs(var, p)) for p in points]
+            Z = sum(probs)
+            self.points = points
+            self.probs = [p/Z for p in probs]
+        else:
+            # For rejection sampling on continuous bounded interval
+            if domain.is_Interval and domain.start.is_finite and domain.end.is_finite:
+                # Find max of pdf on domain (symbolically)
+                x = var
+                d = sp.diff(pdf, x)
+                crit = [domain.start, domain.end]  # endpoints
+                crit += list(sp.solve(sp.Eq(d, 0), x))  # interior critical points
+                # Filter valid points
+                crit = [c for c in crit if c.is_real and c >= domain.start and c <= domain.end]
+                # Evaluate pdf
+                self.M = max(float(pdf.subs(x, c)) for c in crit)
+            else:
+                raise NotImplementedError("Unbounded or symbolic domains need special handling")
+
+    def sample(self, n=1):
+        if self.is_discrete:
+            # Use random.choices for PMFs
+            return random.choices(self.points, weights=self.probs, k=n)
+
+        # Continuous: rejection sampling
+        a, b = float(self.domain.start), float(self.domain.end)
+        samples = []
+        while len(samples) < n:
+            x_try = random.uniform(a, b)
+            y_try = random.uniform(0, self.M)
+            if y_try < self.f(x_try):
+                samples.append(x_try)
+        return samples
 
 
 class Graph(QtWidgets.QWidget):

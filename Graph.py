@@ -9,7 +9,8 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import sympy as sp
 import sympy.stats
-from sympy import exp, sin, cos, oo, pi, log
+from sympy import exp, sin, cos, oo, pi, log, S, nsimplify
+from sympy.calculus.util import continuous_domain
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from sympy import diff, integrate
@@ -24,6 +25,8 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import fsolve
 from itertools import product
 import random
+import itertools
+import bisect
 
 
 class GraphWindow(QtWidgets.QWidget):

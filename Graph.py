@@ -1564,7 +1564,7 @@ interval3_set = graph1.add_set(interval3)
 binomial_set = graph1.add_set(binomial_interval)
 
 #graph1.add_function(lambda x, a, b: (a*x)**b, num_points=1000, domain=interval2_set)
-graph1.add_function(lambda x, mu, sigma2: (1/(sp.sqrt(2*sp.pi*sigma2)))*exp(-(1/2)*((x-mu)**2))/(2*sigma2), num_points=1000, domain=normal_set)
+graph1.add_function(lambda x, mu, sigma2: (1/(sp.sqrt(2*sp.pi*sigma2)))*exp(-(1/2)*((x-mu)**2))/(2*sigma2), num_points=50, domain=normal_set)
 
 
 

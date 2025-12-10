@@ -537,10 +537,15 @@ class Point():
 
 
 class Function():
-    def __init__(self, x_func, y_func, params, param_connections, y_values, x_values, t_space, t_range, num_points,
-                 color, width, curve, y_expr, x_expr, y_symbols, x_symbols, type, initial_parametric_resolution):
+    def __init__(self, x_func, y_func, x_num, y_num, params, param_connections, y_values, x_values, domain, base_domain,
+                 t_space, t_range, num_points, color, width, curve, scatter, y_expr, x_expr, y_symbols, x_symbols, type,
+                 initial_parametric_resolution, plot):
+        # Lambda functions
         self.x_func = x_func
         self.y_func = y_func
+        # Numerical expressions
+        self.x_num = x_num
+        self.y_num = y_num
         self.params = {}
         for k, v in params.items():
             self.params = {k: str(v)}
@@ -548,8 +553,10 @@ class Function():
         self.y_values = y_values
         self.param_values = self.y_values
         self.x_values = x_values
-        self.t_space = t_space
-        self.t_range = t_range
+        self.domain = domain  # set obj
+        self.base_domain = base_domain  # sp Set, numerical evaluation of original domain
+        self.t_space = t_space  # ta bort senare
+        self.t_range = t_range  # ta bort senare
         self.num_points = num_points
         self.color = color
         self.width = width

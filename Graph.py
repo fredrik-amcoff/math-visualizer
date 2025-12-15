@@ -478,7 +478,8 @@ class Graph(QtWidgets.QWidget):
         else:
             func_type = "parametric"  # x = f(t), y = g(t)
 
-
+        y_expr = sp.sympify(y_expr)  # make sure it's sympy expression
+        x_expr = sp.sympify(x_expr)
         params = self._format_param_dict(params)
         curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
         scatter = pg.ScatterPlotItem(size=point_size, brush=pg.mkBrush(color))

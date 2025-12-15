@@ -242,6 +242,8 @@ class Graph(QtWidgets.QWidget):
         self.plotWidget = None
 
         # Basic config
+        self.x = x
+        self.y = y
         self.xmin = xmin
         self.xmax = xmax
         self.ymin = ymin

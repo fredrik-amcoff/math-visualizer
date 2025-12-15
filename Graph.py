@@ -557,6 +557,9 @@ class Graph(QtWidgets.QWidget):
         if y_expr is None:
             y_expr = self.y
 
+        y_expr = sp.sympify(y_expr)  # make sure it's sympy expression
+        x_expr = sp.sympify(x_expr)
+
         y_symbols = y_expr.free_symbols
         x_symbols = x_expr.free_symbols
 

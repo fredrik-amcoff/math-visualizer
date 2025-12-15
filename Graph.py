@@ -273,6 +273,8 @@ class Graph(QtWidgets.QWidget):
         self.plotWidget = plot_widget
         self.plotWidget.setBackground(self.bg_color)
         self.plotWidget.showGrid(x=self.x_axis, y=self.y_axis, alpha=0.3)
+        self.plotWidget.setLabel('left', str(self.y), **{'font-size': '12pt'})
+        self.plotWidget.setLabel('bottom', str(self.x), **{'font-size': '12pt'})
         self.plotWidget.setMouseEnabled(x=self.x_axis, y=self.y_axis)
         self.plotWidget.setRange(xRange=[self.xmin, self.xmax], yRange=[self.ymin, self.ymax])
         self.plotWidget.getAxis("left").setPen(self.left_color)

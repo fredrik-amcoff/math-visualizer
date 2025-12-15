@@ -27,6 +27,7 @@ from itertools import product
 import random
 import itertools
 import bisect
+from math_objects import *
 
 
 class GraphWindow(QtWidgets.QWidget):

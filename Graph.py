@@ -1038,7 +1038,7 @@ class GenericSampler:
 
 
 class Graph(QtWidgets.QWidget):
-    def __init__(self, name=None, xmin=-10, xmax=10, ymin=-10, ymax=10, bg_color="w", left_color="k", bottom_color="k", x_axis=True, y_axis=True, axis_color="k", axis_width=2):
+    def __init__(self, name=None, x=sp.Symbol("x"), y=sp.Symbol("y"), xmin=-10, xmax=10, ymin=-10, ymax=10, bg_color="w", left_color="k", bottom_color="k", x_axis=True, y_axis=True, axis_color="k", axis_width=2):
         super().__init__()
         self.name = name
         self.parent = None  # GraphWindow object, gets added when Graph is added to GraphWindow

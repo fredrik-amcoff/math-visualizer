@@ -175,8 +175,8 @@ class Function():
             self.params = {k: str(v)}
         self.param_connections = param_connections
         self.y_values = y_values
-        self.param_values = self.y_values
         self.x_values = x_values
+        self.param_values = y_values | x_values
         self.domain = domain  # set obj
         self.base_domain = base_domain  # sp Set, numerical evaluation of original domain
         self.t_space = t_space  # ta bort senare
@@ -204,6 +204,8 @@ class Function():
                 self.x_values[key] = value
             if key in self.y_values:
                 self.y_values[key] = value
+            if key in self.param_values:
+                self.param_values[key] = value
 
         self.y_num = self.y_expr.subs(self.y_values)
         self.x_num = self.x_expr.subs(self.x_values)

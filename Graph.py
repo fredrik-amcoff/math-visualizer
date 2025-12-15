@@ -745,11 +745,13 @@ class Graph(QtWidgets.QWidget):
 
 app = QtWidgets.QApplication(sys.argv)
 viewer = GraphWindow(rows=1, cols=2)
-graph1 = Graph(ymin=0, ymax=10)
-graph2 = Graph(xmin=0, xmax=10, ymin=-1, ymax=1, y_axis=False)
+x = sp.Symbol("θ")
+y = sp.Symbol("δ")
+graph1 = Graph(ymin=0, ymax=10, x=x, y=y)
+graph2 = Graph(xmin=0, xmax=10, ymin=-1, ymax=1)
 viewer.add_graph(graph1)
 viewer.add_graph(graph2)
-#a = viewer.add_parameter("a", 0, 1, 1, 200)
+a = viewer.add_parameter("a", 0, 1, 1, 200)
 #b = viewer.add_parameter("b", 0, 10, 5, 100, 'real')
 c = viewer.add_parameter("c", 0, 50, 5, 100, 'real')
 #p = viewer.add_parameter("p", 0, 1, 0, 100, numeric_domain='real')
@@ -758,17 +760,16 @@ b = viewer.add_parameter("b", 0, 10, 1, 100, numeric_domain='real')
 mu = viewer.add_parameter("mu", -10, 10, 0, 100, numeric_domain='real')
 sigma2 = viewer.add_parameter("sigma2", 0, 10, 1, 100, numeric_domain='real')
 
-#graph2.add_point(a, b)
-#graph1.add_grid(x_range=(-10, 10), y_range=(-10, 10), num_lines=11, x_func=lambda x,y,a: (1-a)*x + a*0, y_func=lambda x,y,a: (1-a)*y + a*((x+y)/2), color="b")
+#graph1.add_grid(x_range=(-10, 10), y_range=(-10, 10), num_lines=11, x_expr=(1-a)*x + a*0, y_expr=(1-a)*y + a*((x+y)/2), color="b")
 
 interval = sp.FiniteSet(*range(500))
 interval3 = sp.Interval(0, 6) - sp.FiniteSet(1)
 interval2 = sp.Interval(1, c) & sp.Integers
 xs = np.linspace(0, 15, 100)
-
-binomial_interval = sp.Interval(0, 100) & sp.Integers
-exponential_interval = sp.Interval(0, oo, left_open=True)
-exponential_set = graph1.add_set(exponential_interval)
+graph1.add_point(mu, sigma2)
+#binomial_interval = sp.Interval(0, 100) & sp.Integers
+#exponential_interval = sp.Interval(0, oo, left_open=True)
+#exponential_set = graph1.add_set(exponential_interval)
 normal_interval = sp.Interval(-oo, oo)
 normal_set = graph1.add_set(normal_interval)
 
@@ -779,7 +780,7 @@ interval3_set = graph1.add_set(interval3)
 binomial_set = graph1.add_set(binomial_interval)
 
 #graph1.add_function(lambda x, a, b: (a*x)**b, num_points=1000, domain=interval2_set)
-graph1.add_function(lambda x, mu, sigma2: (1/(sp.sqrt(2*sp.pi*sigma2)))*exp(-(1/2)*((x-mu)**2))/(2*sigma2), num_points=50, domain=normal_set)
+graph1.add_function((1/(sp.sqrt(2*sp.pi*sigma2)))*exp(-(1/2)*((x-mu)**2))/(2*sigma2))
 
 
 

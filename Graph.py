@@ -447,18 +447,17 @@ class Graph(QtWidgets.QWidget):
         x, y = func(x_eval, y_eval)
         scatter.setData([x], [y])
 
-    def add_function(self, y_func, x_func=None, params=None, domain=None, t_range=(-100, 100), num_points=1000,
-                     initial_parametric_resolution=int(10000), main_variables=1, plot=True, color="b", width=2,
+    def add_function(self, y_expr, x_expr=None, params=None, domain=None, t_range=(-100, 100), num_points=1000,
+                     initial_parametric_resolution=int(10000), plot=True, color="b", width=2,
                      point_size=5):
         """
         Default is cartesian y-function (f(x)). By adding a x_func, it is also possible to create a parametric function.
-        :param y_func: function of x
-        :param x_func: function of y
+        :param y_expr: function of x
+        :param x_expr: function of y
         :param params: dictionary of parameters
         :param t_range: domain for cartesian functions, range of t for parametric functions
         :param num_points: number of total rendered points at each state
         :param initial_parametric_resolution: ?
-        :param main_variables: first n variables will be treated as main variables
         :param color: color
         :param width: width of plot
         :return: Function object
@@ -466,12 +465,18 @@ class Graph(QtWidgets.QWidget):
 
         if params is None:
             params = {}
-        if x_func is None:
-            x_func = lambda t: t
+        if x_expr is None:
+            x_expr = self.y
         if domain is None:
             infinite_set = self.add_set(sp.Interval(-oo, oo), plot=False)  # Default domain: interval +-infinity
             domain = infinite_set
-
+        # Determine function type
+        if y_expr == self.x:
+            func_type = "x_cartesian"  # x = f(y)
+        elif x_expr == self.y:
+            func_type = "y_cartesian"  # y = f(x)
+        else:
+            func_type = "parametric"  # x = f(t), y = g(t)
 
 
         params = self._format_param_dict(params)
@@ -482,19 +487,22 @@ class Graph(QtWidgets.QWidget):
         t = np.linspace(t_range[0], t_range[1], num_points)
         parameter_connections = {}
 
-        y_vars = inspect.signature(y_func)
-        x_vars = inspect.signature(x_func)
+        y_symbols = y_expr.free_symbols
+        x_symbols = x_expr.free_symbols
 
-        y_symbols = sp.symbols(list(y_vars.parameters))
-        x_symbols = sp.symbols(list(x_vars.parameters))
+        y_vars = y_symbols - {self.x, self.y}  # set of sp.Symbol
+        x_vars = x_symbols - {self.x, self.y}  # set of sp.Symbol
 
-        y_vals, y_params = self._get_single_values(y_vars.parameters, params, skip_first=main_variables)
-        x_vals, x_params = self._get_single_values(x_vars.parameters, params, skip_first=main_variables)
-        domain_vals, domain_params = self._get_single_values(domain.expr.free_symbols, params, skip_first=0)
+        # Dictionaries of values and Parameter objects
+        y_vals, y_params = self._get_single_values(y_vars, params)
+        x_vals, x_params = self._get_single_values(x_vars, params)
+        domain_vals, domain_params = self._get_single_values(domain.expr.free_symbols, params)
 
-        # Symbolic expressions
-        y_expr = y_func(*y_symbols)
-        x_expr = x_func(*x_symbols)
+        y_ordered_symbols = tuple([self.x] + list(y_params.keys()))
+        x_ordered_symbols = tuple([self.y] + list(x_params.keys()))
+
+        y_func = sp.lambdify(y_ordered_symbols, y_expr, modules=["numpy", "scipy"])
+        x_func = sp.lambdify(x_ordered_symbols, x_expr, modules=["numpy", "scipy"])
 
         # Numerical expressions
         y_num = y_expr.subs(y_vals)
@@ -505,12 +513,12 @@ class Graph(QtWidgets.QWidget):
 
         # Domain restrictions by function (example undefined points)
         try:
-            y_inherent_domain = continuous_domain(y_num, y_symbols[0], S.Reals)
+            y_inherent_domain = continuous_domain(y_num, self.y, S.Reals)
         except NotImplementedError:
             y_inherent_domain = sp.Interval(-oo, oo)
             warnings.warn("Sympy unable to calculate inherent domain, assumes +-oo instead.")
         try:
-            x_inherent_domain = continuous_domain(x_num, x_symbols[0], S.Reals)
+            x_inherent_domain = continuous_domain(x_num, self.x, S.Reals)
         except NotImplementedError:
             x_inherent_domain = sp.Interval(-oo, oo)
             warnings.warn("Sympy unable to calculate inherent domain, assumes +-oo instead.")
@@ -525,20 +533,9 @@ class Graph(QtWidgets.QWidget):
         for k, v in x_params.items():
             parameter_connections[k] = [v.name]
 
-        x = sp.lambdify(x_symbols, x_expr, modules=["numpy", "scipy"])(t, **x_vals) * np.ones_like(t, dtype=float)
-        y = sp.lambdify(y_symbols, y_expr, modules=["numpy", "scipy"])(t, **y_vals) * np.ones_like(t, dtype=float)
-
-        if np.array_equal(y, t):
-            func_type = "x_cartesian"  # x = f(y)
-        elif np.array_equal(x, t):
-            func_type = "y_cartesian"  # y = f(x)
-        else:
-            func_type = "parametric"  # x = f(t), y = g(t)
-
-
         function = Function(x_func, y_func, x_num, y_num, params, parameter_connections, y_vals, x_vals, domain,
                             base_domain, t, t_range, num_points, color, width, curve, scatter, y_expr, x_expr,
-                            y_symbols, x_symbols, func_type, initial_parametric_resolution, plot)
+                            y_ordered_symbols, x_ordered_symbols, func_type, initial_parametric_resolution, plot, self)
 
         for param in dict(y_vals, **x_vals, **domain_vals):
             param_name = params[param].name
@@ -552,21 +549,22 @@ class Graph(QtWidgets.QWidget):
         self.parent.obj_graph_connections[function] = self
         return function
 
-    def add_grid(self, x_range=(-10, 10), y_range=(-10, 10), num_lines=21, x_func=lambda x, y: x, y_func=lambda x, y: y, params=None, num_points=1000, color="grey", width=2, alpha=0.9):
+    def add_grid(self, x_range=(-10, 10), y_range=(-10, 10), num_lines=21, x_expr=None, y_expr=None, params=None, num_points=1000, color="grey", width=2, alpha=0.9):
         if params is None:
             params = {}
+        if x_expr is None:
+            x_expr = self.x
+        if y_expr is None:
+            y_expr = self.y
 
-        y_vars = inspect.signature(y_func)
-        x_vars = inspect.signature(x_func)
+        y_symbols = y_expr.free_symbols
+        x_symbols = x_expr.free_symbols
 
-        y_symbols = sp.symbols(list(y_vars.parameters))
-        x_symbols = sp.symbols(list(x_vars.parameters))
+        y_vars = y_symbols - {self.x, self.y}  # set of sp.Symbol
+        x_vars = x_symbols - {self.x, self.y}  # set of sp.Symbol
 
-        y_vals, y_params = self._get_single_values(y_vars.parameters, params, skip_first=2)
-        x_vals, x_params = self._get_single_values(x_vars.parameters, params, skip_first=2)
-
-        y_expr = y_func(*y_symbols)
-        x_expr = x_func(*x_symbols)
+        y_vals, y_params = self._get_single_values(y_vars, params)
+        x_vals, x_params = self._get_single_values(x_vars, params)
 
         params = dict(y_params, **x_params)
 
@@ -576,8 +574,11 @@ class Graph(QtWidgets.QWidget):
         x_space = np.linspace(x_range[0], x_range[1], num_points)
         y_space = np.linspace(y_range[0], y_range[1], num_points)
 
-        x_func = sp.lambdify(x_symbols, x_expr, modules=["numpy", "scipy"])
-        y_func = sp.lambdify(y_symbols, y_expr, modules=["numpy", "scipy"])
+        y_ordered_symbols = tuple([self.x, self.y] + list(y_params.keys()))
+        x_ordered_symbols = tuple([self.x, self.y] + list(x_params.keys()))
+
+        y_func = sp.lambdify(y_ordered_symbols, y_expr, modules=["numpy", "scipy"])
+        x_func = sp.lambdify(x_ordered_symbols, x_expr, modules=["numpy", "scipy"])
 
         x_transform_lines = []
         y_transform_lines = []

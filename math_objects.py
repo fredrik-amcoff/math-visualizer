@@ -119,13 +119,21 @@ class Expression():
 
 
 class Point():
-    def __init__(self, x, y, param_connections, scatter, func=lambda x, y: (x, y), color="r", size=10, plot=True):
-        self.x = x
-        self.y = y
-        self.func = func
-        self.transformed_coord = self.func(x, y)
-        self.x_transform = self.transformed_coord[0]
-        self.y_transform = self.transformed_coord[1]
+    def __init__(self, x_expr, y_expr, x_func, y_func, x_num, y_num, x_symbols, y_symbols, x_values, y_values, params,
+                 param_connections, scatter, color, size, plot):
+        self.x = x_expr
+        self.y = y_expr
+        self.x_func = x_func
+        self.y_func = y_func
+        self.x_num = x_num
+        self.y_num = y_num
+        self.x_symbols = x_symbols
+        self.y_symbols = y_symbols
+        self.x_values = x_values
+        self.y_values = y_values
+        self.param_values = y_values | x_values
+        self.x_point = x_func(**x_values)
+        self.y_point = y_func(**y_values)
         self.param_connections = param_connections
         self.scatter = scatter
         self.color = color
@@ -136,14 +144,17 @@ class Point():
         if not self.plot:
             return
         for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-            else:
-                raise AttributeError(f'{key} not found.')
-        x_transform, y_transform = self.func(self.x, self.y)
-        self.x_transform = x_transform
-        self.y_transform = y_transform
-        self.scatter.setData([x_transform], [y_transform])
+            if key in self.x_values:
+                self.x_values[key] = value
+            if key in self.y_values:
+                self.y_values[key] = value
+            if key in self.param_values:
+                self.param_values[key] = value
+
+        self.x_point = self.x_func(**self.x_values)
+        self.y_point = self.y_func(**self.y_values)
+
+        self.scatter.setData([self.x_point], [self.y_point])
 
     def save_data(self):
         return ("point", {"X": self.x, "Y": self.y, "func": self.func, "color": self.color, "size": self.size})

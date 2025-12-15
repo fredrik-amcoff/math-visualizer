@@ -419,33 +419,56 @@ class Graph(QtWidgets.QWidget):
 
         return expression
 
-    def add_point(self, X, Y, func=lambda x, y: (x, y), color="r", size=10):
-        if not isinstance(X, (int, float)) or not isinstance(Y, (int, float)):
-            if str(X) not in self.parameters.keys() or str(Y) not in self.parameters.keys():
-                warnings.warn("Points defined from expressions are not supported. The initial value will be correct "
-                              "\nbut any updates to the expression through the parameters will be incorrect. Instead, "
-                              "\nenter pure parameters as inputs and define the transformation in the func argument.")
-        param_values = {p.expr: p.value for p in self.parent.parameters.values()}
+    def add_point(self, x, y, params=None, color="r", size=10, plot=True):
+        if params is None:
+            params = {}
+        x = sp.sympify(x)  # make sure it's sympy expression
+        y = sp.sympify(y)
         scatter = pg.ScatterPlotItem(size=size, brush=pg.mkBrush(color))
         self.plotWidget.addItem(scatter)
-        X = X.expr if type(X) in (Parameter, Expression) else X
-        Y = Y.expr if type(Y) in (Parameter, Expression) else Y
-        X = sp.sympify(X)
-        Y = sp.sympify(Y)
-        params = list(X.free_symbols) + list(Y.free_symbols)
-        x_eval = X.subs(param_values).evalf()
-        y_eval = Y.subs(param_values).evalf()
-        parameter_connections = {'x': [symbol.name for symbol in X.free_symbols], 'y': [symbol.name for symbol in Y.free_symbols]}
-        point = Point(X, Y, param_connections=parameter_connections, scatter=scatter, func=func,
-                      color=color, size=size)
-        for param in set(params):
-            self.parent.parameter_connections[str(param)].append(point)
+
+        params = self._format_param_dict(params)
+
+        y_symbols = y.free_symbols
+        x_symbols = x.free_symbols
+
+        if self.x in list(y_symbols) + list(x_symbols) or self.y in list(y_symbols) + list(x_symbols):
+            raise TypeError(f"Point x- and y-expressions cannot depend on axis-variables, please add as function instead.")
+
+        # Dictionaries of values and Parameter objects
+        y_vals, y_params = self._get_single_values(y_symbols, params)
+        x_vals, x_params = self._get_single_values(x_symbols, params)
+
+        y_ordered_symbols = list(y_params.keys())
+        x_ordered_symbols = list(x_params.keys())
+
+        y_func = sp.lambdify(y_ordered_symbols, y, modules=["numpy", "scipy"])
+        x_func = sp.lambdify(x_ordered_symbols, x, modules=["numpy", "scipy"])
+
+        # Numerical expressions
+        y_num = y.subs(y_vals)
+        x_num = x.subs(x_vals)
+
+        params = dict(y_params, **x_params)
+
+        parameter_connections = {}
+        for k, v in y_params.items():
+            parameter_connections[k] = [v.name]
+        for k, v in x_params.items():
+            parameter_connections[k] = [v.name]
+
+        #parameter_connections = {'x': [symbol.name for symbol in x.free_symbols], 'y': [symbol.name for symbol in y.free_symbols]}
+        point = Point(x, y, x_func, y_func, x_num, y_num, x_symbols, y_symbols, x_vals, y_vals, params,
+                      parameter_connections, scatter, color, size, plot)
+
+        for param in dict(y_vals, **x_vals):
+            param_name = params[param].name
+            self.parent.parameter_connections[param_name].append(point)
         self.points.append(point)
         self.objects.append(point)
         self.plot_objects.append(point)
         self.parent.obj_graph_connections[point] = self
-        x, y = func(x_eval, y_eval)
-        scatter.setData([x], [y])
+        point.update_values(self.x_view_range, self.y_view_range)
 
     def add_function(self, y_expr, x_expr=None, params=None, domain=None, t_range=(-100, 100), num_points=1000,
                      initial_parametric_resolution=int(10000), plot=True, color="b", width=2,

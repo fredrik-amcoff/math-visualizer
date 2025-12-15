@@ -365,20 +365,34 @@ class Graph(QtWidgets.QWidget):
                 dict[key] = self.parameters[value]
         return dict
 
-    def _get_single_values(self, var_list, params, skip_first=0):
-        pvals = {}
-        pdict = {}
-        for key in list(var_list)[skip_first:]:
-            key = str(key)  # Key could be sp symbol, in that case convert to str.
+    def _get_single_values(self, variables, params):
+        """
+        Reformat and order variables according to specified params dictionary.
+        :param variables: set of sp.Symbol objects
+        :param params: dictionary as {str: Parameter}
+        :return: dictionary as {param: value} and {param: Parameter}
+        """
+        pvals, pdict = {}, {}
+        variables = {str(obj): obj for obj in variables}  # convert variables to same format as params
+        ordered_keys = [str(k) for k in params.values() if str(k) in variables]  # parameters specified in params
+        # other parameters (ordered alphabetically):
+        remaining_keys = sorted(str(k) for k in variables if str(k) not in params)
+        # Sort according to:
+        # if specified in params, put these first in the same order as in params
+        # if not specified in params, put them in the end, sorted alphabetically
+        variables = {k: variables[k] for k in ordered_keys + remaining_keys}
+
+        for key in variables:
+            #key = str(key)  # Key could be sp symbol, in that case convert to str.
             try:
                 pvals[key] = params[key].value
                 pdict[key] = params[key]
             except KeyError:  # If param not specified
                 if key in self.parent.single_values:
-                    type, value = self.parent.single_values[key]
+                    param_type, value = self.parent.single_values[key]
                     pvals[key] = value
                     pdict[key] = self.parent.parameters[key]
-                    warnings.warn(f"Variable {key} not specified, assumes added {type} {key}.")
+                    warnings.warn(f"Variable {key} not specified, assumes added {param_type} {key}.")
                 else:
                     raise KeyError(f"Variable {key} not defined.")
         return pvals, pdict

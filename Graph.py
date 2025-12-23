@@ -741,7 +741,7 @@ class Graph(QtWidgets.QWidget):
 
         #self.plotWidget.addItem(arrow)
 
-    def add_set(self, sp_set, params=None, plot=True, color="b", width=2):
+    def add_set(self, sp_set, params=None, num_points=1000, plot=True, color="b", width=2):
         if params is None:
             params = {}
 
@@ -755,7 +755,7 @@ class Graph(QtWidgets.QWidget):
         for k, v in params.items():
             parameter_connections[k] = [v.name]
 
-        set_obj = NumSet(sp_set, params, param_vals, parameter_connections, plot)
+        set_obj = NumSet(sp_set, params, param_vals, parameter_connections, num_points, color, width, plot)
 
         for param in set(params):
             self.parent.parameter_connections[param].append(set_obj)

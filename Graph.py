@@ -839,13 +839,35 @@ class Graph(QtWidgets.QWidget):
 
 app = QtWidgets.QApplication(sys.argv)
 viewer = GraphWindow(rows=1, cols=2)
-x = sp.Symbol("θ")
-y = sp.Symbol("δ")
-graph1 = Graph(ymin=0, ymax=10, x=x, y=y)
-graph2 = Graph(xmin=0, xmax=10, ymin=-1, ymax=1)
+theta_hat = viewer.add_parameter("theta_hat", 0, 10, 5, 100)
+transform = viewer.add_parameter("transform", 0, 1, 0, 100)
+density = viewer.add_parameter("density", 0, 50, 0, 500)
+a = viewer.add_parameter("a", 0, 10, 1.4, 100)
+p = viewer.add_parameter("p", 0, 10, 2.9, 100)
+x = sp.Symbol("x")
+y = sp.Symbol("y")
+graph1 = Graph(xmin=0, xmax=10, ymin=0, ymax=10, x=x, y=y)
+graph2 = Graph(xmin=0, xmax=10, ymin=0, ymax=10, x=x, y=y)
 viewer.add_graph(graph1)
 viewer.add_graph(graph2)
-a = viewer.add_parameter("a", 0, 1, 1, 200)
+
+domain = graph1.add_set(sp.Interval(0, oo, left_open=True))
+graph1.add_function_2d(4*(x+y)/2, level=theta_hat, domain=domain, color="r", num_points=100)
+graph1.add_point(theta_hat, 0)
+graph1.add_grid(x_range=(0, 10), y_range=(0, 10), x_expr=(1-transform)*x + transform*0, y_expr=(1-transform)*y + transform*(4*(x+y))/2, color="b", num_lines=11)
+
+graph2.add_function_2d(((1/(sp.gamma(p)*a**p))*x**(p-1)*exp(-x/a)) * ((1/(sp.gamma(p)*a**p))*y**(p-1)*exp(-y/a)), num_points=500, x_range=(1, 10), y_range=(0, 10))
+
+
+
+
+
+#graph1.plotWidget.plot(x, y, stepMode=True, fillLevel=0, pen=pg.mkPen(color="r", width=2))
+
+
+
+
+
 #b = viewer.add_parameter("b", 0, 10, 5, 100, 'real')
 c = viewer.add_parameter("c", 0, 50, 5, 100, 'real')
 #p = viewer.add_parameter("p", 0, 1, 0, 100, numeric_domain='real')

@@ -683,22 +683,22 @@ def fast_intersection(y_inherent_domain, x_inherent_domain, window_interval, bas
 
 
 class NumSet:
-    def __init__(self, sp_set, params, param_values, parameter_connections, plot):
+    def __init__(self, sp_set, params, param_values, parameter_connections, num_points, color, width, plot):
         self.expr = sp_set  # Symbolic expression (sp.Set)
         self.numerical_set = sp_set.subs(param_values)  # Numerical expression (sp.Set)
         self.params = params
         self.param_values = param_values
         self.param_connections = parameter_connections
+        self.num_points = num_points
+        self.color = color
+        self.width = width
         self.plot = plot
 
     def update_values(self, x_range, y_range, **kwargs):
-        if not self.plot:
-            return
         for key, value in kwargs.items():
             self.param_values[key] = value
 
         self.numerical_set = self.expr.subs(self.param_values)
-
 
 class GenericSampler:
     def __init__(self, var, pdf, domain):

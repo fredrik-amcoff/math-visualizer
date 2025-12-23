@@ -582,6 +582,64 @@ class Graph(QtWidgets.QWidget):
         self.parent.obj_graph_connections[function] = self
         return function
 
+    def add_function_2d(self, z_expr, params=None, domain=None, num_points=500, x_range=(-100, 100), y_range=(-100, 100), level=0, color="b", width=2, point_size=5, plot=True):
+        if params is None:
+            params = {}
+        if domain is None:
+            infinite_set = self.add_set(sp.ProductSet(sp.Interval(-oo,oo), sp.Interval(-oo,oo)), plot=False)  # Default domain: interval +-infinity
+            domain = infinite_set
+
+        z_expr = sp.sympify(z_expr)  # make sure it's sympy expression
+        level = sp.sympify(level)  # level could be sympy object
+        params = self._format_param_dict(params)
+        curve = self.plotWidget.plot(pen=pg.mkPen(color=color, width=width))
+        scatter = pg.ScatterPlotItem(size=point_size, brush=pg.mkBrush(color))
+        self.plotWidget.addItem(scatter)
+        parameter_connections = {}
+        heatmap = pg.ImageItem()
+        colormap = pg.colormap.get('viridis').getLookupTable(0, 1, 256)
+        heatmap.setLookupTable(colormap)
+        self.plotWidget.addItem(heatmap)
+
+        z_symbols = z_expr.free_symbols
+
+        z_vars = z_symbols - {self.x, self.y}  # set of sp.Symbol
+        level_vars = level.free_symbols
+
+        # Dictionaries of values and Parameter objects
+        z_vals, z_params = self._get_single_values(z_vars, params)
+        domain_vals, domain_params = self._get_single_values(domain.expr.free_symbols, params)
+        level_vals, level_params = self._get_single_values(level_vars, params)
+
+        z_ordered_symbols = tuple([self.x] + [self.y] + list(z_params.keys()))
+
+        z_func = sp.lambdify(z_ordered_symbols, z_expr, modules=["numpy", "scipy"])
+
+        # Numerical expressions
+        z_num = z_expr.subs(z_vals)
+
+        params = dict(z_params, **domain_params, **level_params)  # Domain params will affect the function
+
+        for k, v in z_params.items():
+            parameter_connections[k] = [v.name]
+        for k, v in level_params.items():
+            parameter_connections[k] = [v.name]
+
+        function = Function2D(z_func, z_expr, z_num, z_symbols, params, parameter_connections, z_vals, x_range, y_range, domain,
+                              num_points, level, level_vals, color, width, curve, scatter, heatmap, plot, self)
+
+        for param in dict(z_vals, **domain_vals, **level_vals):
+            param_name = params[param].name
+            self.parent.parameter_connections[param_name].append(function)
+
+        # curve.setData(x.astype(float), y.astype(float))
+        function.update_values(self.x_view_range, self.y_view_range)
+        self.objects.append(function)
+        self.functions.append(function)
+        self.plot_objects.append(function)
+        self.parent.obj_graph_connections[function] = self
+        return function
+
     def add_grid(self, x_range=(-10, 10), y_range=(-10, 10), num_lines=21, x_expr=None, y_expr=None, params=None, num_points=1000, color="grey", width=2, alpha=0.9):
         if params is None:
             params = {}

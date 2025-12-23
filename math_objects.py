@@ -49,6 +49,12 @@ class Parameter():
     def __rmul__(self, other):
         return sp.sympify(other) * sp.sympify(self)
 
+    def __truediv__(self, other):
+        return sp.sympify(self) / sp.sympify(other)
+
+    def __rtruediv__(self, other):
+        return sp.sympify(self) / sp.sympify(other)
+
     def __sub__(self, other):
         return sp.sympify(self) - sp.sympify(other)
 
@@ -102,6 +108,12 @@ class Expression():
 
     def __rmul__(self, other):
         return sp.sympify(other) * sp.sympify(self)
+
+    def __truediv__(self, other):
+        return sp.sympify(self) / sp.sympify(other)
+
+    def __rtruediv__(self, other):
+        return sp.sympify(self) / sp.sympify(other)
 
     def __sub__(self, other):
         return sp.sympify(self) - sp.sympify(other)

@@ -480,7 +480,7 @@ class Graph(QtWidgets.QWidget):
         self.parent.obj_graph_connections[point] = self
         point.update_values(self.x_view_range, self.y_view_range)
 
-    def add_function(self, y_expr, x_expr=None, params=None, domain=None, t_range=(-100, 100), num_points=1000,
+    def add_function(self, y_expr, x_expr=None, params=None, domain=None, t_range=(-100, 100), num_points=500,
                      initial_parametric_resolution=int(10000), plot=True, color="b", width=2,
                      point_size=5):
         """

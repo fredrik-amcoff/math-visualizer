@@ -1,10 +1,14 @@
 import numpy as np
 import pyqtgraph as pg
 import sympy as sp
+from PyQt5.uic.properties import QtGui
+from pyqtgraph.Qt import QtGui, mkQApp
 from sympy import exp, sin, cos, oo, pi, log, S, nsimplify
 from sympy.calculus.util import continuous_domain
 import random
 import bisect
+import matplotlib.pyplot as plt
+from skimage.measure import find_contours
 
 
 class Parameter():

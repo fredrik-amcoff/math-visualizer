@@ -255,6 +255,8 @@ class Function():
             y = np.where(mask, t_space, np.nan)
             x = func(y, **self.x_values)
             x = np.where(mask, x, np.nan)
+            if type(y) == int or type(y) == float or type(y) == np.float64:
+                x = np.repeat(x, self.num_points)
             if len(sliced_points)>0:
                 y_points = np.array(sliced_points)
                 x_points = func(y_points, **self.x_values)
@@ -272,13 +274,14 @@ class Function():
             mask = mask_func(t_space)
             x = np.where(mask, t_space, np.nan)
             y = func(x, **self.y_values)
+            if type(y) == int or type(y) == float or type(y) == np.float64:
+                y = np.repeat(y, self.num_points)
             if len(sliced_points) > 0:
                 x_points = np.array(sliced_points).astype(float)
                 y_points = func(x_points, **self.y_values)
                 self.scatter.setData(x_points, y_points)
             else:
                 self.scatter.setData([np.nan], [np.nan])
-
             self.curve.setData(x.astype(float), y.astype(float))  # Change to float before plotting
             return
         else:
@@ -288,6 +291,11 @@ class Function():
         x = np.where(mask, x, np.nan)
         y = self.y_func(t_space, **self.y_values)
         y = np.where(mask, y, np.nan)
+
+        if type(y) == int or type(y) == float or type(y) == np.float64:
+            x = np.repeat(x, self.num_points)
+        if type(y) == int or type(y) == float or type(y) == np.float64:
+            y = np.repeat(y, self.num_points)
 
         if self.type == "parametric":
             visible_mask = (

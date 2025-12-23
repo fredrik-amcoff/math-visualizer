@@ -2,9 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import sympy as sp
+from itertools import chain
+# Basic math
+from sympy import exp, sin, cos, oo, pi, log
 # Continuous distributions
 from sympy.stats import (Normal, Uniform, Exponential, Gamma, Beta, ChiSquared, StudentT, FDistribution, Cauchy,
-                         Rayleigh, LogNormal, Weibull, Pareto, Gompertz, Laplace, Maxwell, PowerFunction, Triangular)
+                         Rayleigh, LogNormal, Weibull, Pareto, Gompertz, Laplace, Maxwell, PowerFunction, Triangular,
+                         ContinuousRV)
 # Discrete distributions
 from sympy.stats import (Bernoulli, Binomial, Poisson, Geometric, NegativeBinomial, Hypergeometric, DiscreteUniform,
                          Zeta, Rademacher)

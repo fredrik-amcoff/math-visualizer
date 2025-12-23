@@ -356,6 +356,79 @@ class Function():
                 "width": self.width})
 
 
+class Function2D:
+    def __init__(self, z_func, z_expr, z_num, z_symbols, params, param_connections, z_values, x_range, y_range, domain, num_points,
+                 level, level_values, color, width, curve, scatter, heatmap, plot, parent):
+        self.z_func = z_func
+        self.z_expr = z_expr
+        self.z_num = z_num
+        self.z_symbols = z_symbols
+        self.params = params
+        self.param_connections = param_connections
+        self.param_values = z_values
+        self.z_values = z_values
+        self.x_range = x_range  # x interval
+        self.y_range = y_range  # y interval
+        self.x_dist = x_range[1] - x_range[0]
+        self.y_dist = y_range[1] - y_range[0]
+        self.domain = domain
+        self.num_points = num_points
+        self.level = level
+        self.level_values = level_values
+        self.color = color
+        self.width = width
+        self.curve = curve
+        self.scatter = scatter
+        self.heatmap = heatmap
+        self.plot = plot
+        self.parent = parent
+
+    def update_values(self, x_range, y_range, **kwargs):
+        if not self.plot:
+            return
+        for key, value in kwargs.items():
+            if key in self.z_values:
+                self.z_values[key] = value
+            if key in self.param_values:
+                self.param_values[key] = value
+            if key in self.level_values:
+                self.level_values[key] = value
+        self.curve.setDownsampling(auto=False)
+        self.curve.setClipToView(False)
+        xs = np.linspace(max(x_range[0], self.x_range[0]), min(x_range[1], self.x_range[1]), self.num_points)
+        ys = np.linspace(max(y_range[0], self.y_range[0]), min(y_range[1], self.y_range[1]), self.num_points)
+        x, y = np.meshgrid(xs, ys)
+
+        z = self.z_func(x, y, **self.z_values)
+
+        # Remove any rows that are entirely NaN
+        z = z[~np.isnan(z).all(axis=1)]
+
+        # Remove any columns that are entirely NaN
+        z = z[:, ~np.isnan(z).all(axis=0)]
+
+        level = self.level.subs(self.level_values)
+
+        transform = QtGui.QTransform()
+        transform.scale(self.x_dist/self.num_points, self.y_dist/self.num_points)
+
+        dx = xs[1] - xs[0]
+        dy = ys[1] - ys[0]
+        # code for heatmap
+        self.heatmap.setPos(self.x_range[0], self.y_range[0])
+        self.heatmap.setImage(z.transpose(), pos=(max(x_range[0], self.x_range[0]), max(y_range[0], self.y_range[0])))
+        self.heatmap.setTransform(transform)
+        #self.heatmap.setPos(xs[0] - dx / 2, ys[0] - dy / 2)
+
+
+        # code for level curve
+        #contours = find_contours(z, level)
+        #for contour in contours:
+        #    px = xs[contour[:, 1].astype(int)]
+        #    py = ys[contour[:, 0].astype(int)]
+        #    self.curve.setData(px, py)
+
+
 class Vector:
     def __init__(self, line, start, vec, params, param_values, color, width):
         self.line = line

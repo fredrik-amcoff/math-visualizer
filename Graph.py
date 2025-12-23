@@ -290,6 +290,7 @@ class Graph(QtWidgets.QWidget):
         self.plotWidget.getAxis("bottom").setPen(self.bottom_color)
         self.plotWidget.setAspectLocked(False)
         self.plotWidget.getViewBox().sigRangeChanged.connect(self._update_range)
+        self.plotWidget.setAspectLocked(True)
 
         # Main axes
         axis_pen = pg.mkPen(self.axis_color, width=self.axis_width)

@@ -859,7 +859,14 @@ graph1.add_grid(x_range=(0, 10), y_range=(0, 10), x_expr=(1-transform)*x + trans
 graph2.add_function_2d(((1/(sp.gamma(p)*a**p))*x**(p-1)*exp(-x/a)) * ((1/(sp.gamma(p)*a**p))*y**(p-1)*exp(-y/a)), num_points=500, x_range=(1, 10), y_range=(0, 10))
 
 
+data = []
+for i in range(1000):
+    data.append(np.mean(np.random.gamma(size=10, shape=4, scale=5)))
 
+y, x = np.histogram(data, bins=30, density=True)
+print(y)
+
+graph1.plotWidget.plot(x, y, stepMode=True, fillLevel=0, pen=pg.mkPen(color="r", width=2))
 
 
 #graph1.plotWidget.plot(x, y, stepMode=True, fillLevel=0, pen=pg.mkPen(color="r", width=2))
